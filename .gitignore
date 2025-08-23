@@ -1,0 +1,35 @@
+/.idea/
+/.git/
+/.env
+
+/__pycache__/
+/data/__pycache__/
+/scripts/__pycache__/
+/scripts/lpsql/__pycache__/
+/source/AUC/__pycache__/
+/source/LPAA/__pycache__/
+/source/LPSB/__pycache__/
+/source/LPSB/submenu/__pycache__/
+/source/MAIN/__pycache__/
+/source/SRV/__pycache__/
+
+/data/email/test manuals.zip
+/source/SRV/web admin panel/
+/.env test/
+/.env real/
+/tmp.py
+
+/data/changed stores logos/
+/data/cheques/
+/data/executor/
+/data/images/
+/data/stores keyboards/
+/data/stores logos/
+
+/database/
+/data/lists/ccc
+/data/lists/ad_approving.json
+/data/lists/ads.json
+/data/lists/arttest.json
+/data/lists/hi_frog.json
+/data/lists/store_form_link.json
