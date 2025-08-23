@@ -223,7 +223,7 @@ async def balance(message: Message):
 async def credits_(message: Message):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
-        await message.answer_photo(cfg.MEDIA.CREDITS, txt.MAIN.CREDITS.TEXT)
+        await message.answer_photo(cfg.MEDIA.CREDITS, caption=txt.MAIN.CREDITS.TEXT)
         tracker.log(
             command=("CREDITS", F.LIGHTMAGENTA_EX + S.DIM),
             from_user=f.collect_FU(message)
@@ -307,4 +307,3 @@ async def help_(message: Message):
             e=e,
             userID=message.from_user.id
         )
-
