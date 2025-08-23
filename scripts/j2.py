@@ -13,7 +13,7 @@ def to_(obj: dict[str, ...], *, tab: int = 4, separators: tuple[str, str] = (', 
     :return: json-like string from input dictionary
     """
 
-    data = dumps(obj, indent=tab, separators=separators)
+    data = dumps(obj, indent=tab, separators=separators, ensure_ascii=False)
     return data if not string_mode else data.replace('\n', '').replace(' ' * tab, ' ').strip()
 
 

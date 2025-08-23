@@ -64,7 +64,8 @@ class Launcher:
             'off':              ['main', 'executor', 'admin', 'stores', 'everything'],
             'shutdown':         [''],
             'extra':            ['-store <hostID> [<ID>]', '-user <ID> <tag> <name>_<surname> <class> <email>'],
-            'heartbeat':        ['']
+            'heartbeat':        [''],
+            'config':           ['-update']
         }
         self.settings_array = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
         if self.settings_array["launch"]:
@@ -478,32 +479,6 @@ class Launcher:
 
     def logs(self, *args):
         self.error_handle("command.outdated", "Outdated", "Sorry, this command is inaccessible from v1.3")
-        '''
-        if args[0] == 'help':
-            # todo: help page
-            pass
-        elif args[0] == '-reset':
-            self.update_settings("next_save_log", "lypay_%d-%m-%Y_%H-%M.log")
-            self.success_handle("logs.reset", "SuccessReset")
-        elif len(args) < 2:
-            self.error_handle("logs.argument", "ArgumentError", "You need to specify a file name!")
-        elif args[0] == '-save':
-            if args[1].find('.log') == -1:
-                self.error_handle("logs.parse", "WrongFormatParse", "You have to use .log file!")
-            elif any(c in args[1] for c in {',', ';', ':', '"', '`', '\\', '|'}):
-                self.error_handle("logs.parse", "WrongSymbolParse", "You can't use one of symbols!")
-            else:
-                self.update_settings("next_save_log", args[1])
-                self.success_handle("logs.update", "SuccessUpdate")
-        elif args[0] == '-read':
-            try:
-                with open(args[1].replace('@local', cwd()).replace('@logs', cfg.PATHS.LOGS), encoding='utf8') as read:
-                    print(read.read())
-            except FileNotFoundError:
-                self.error_handle("logs.fileNotFound", "FileNotFound", f"There is no file named '{args[0]}'!")
-        else:
-            self.error_handle("logs.argument", "ArgumentError", f"There is no argument '{args[0]}' for 'logs'!")
-        '''
 
     def open(self, *args):
         if args[0] == 'help':
@@ -543,8 +518,8 @@ cd /d "%~dp0"
                 launch_setup += f"""
 start "LyPay: main" cmd /c python main.py lypay_{cfg.VERSION}_launch_stamp
 start "LyPay: exe" cmd /c python executor.py lypay_{cfg.VERSION}_launch_stamp
-start "LyPay: stores" cmd /c python stores.py lypay_{cfg.VERSION}_launch_stamp
 start "LyPay: admins" cmd /c python admins.py lypay_{cfg.VERSION}_launch_stamp
+start "LyPay: stores" cmd /c python stores.py lypay_{cfg.VERSION}_launch_stamp
 """
 
             else:

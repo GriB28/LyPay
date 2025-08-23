@@ -28,6 +28,7 @@ async def promo_start(message: Message, state: FSMContext):
             if j2_fromfile(PATHS.LAUNCH_SETTINGS)["main_can_use_promo"]:
                 await message.answer(txt.MAIN.PROMO_CODE.START, reply_markup=main_keyboard.update_keyboard(message.from_user.id, True))
                 await state.set_state(CouponFSM.ID)
+                await state.update_data(COUPON_ID=None)
                 tracker.log(
                     command=("PROMOCODE", F.YELLOW + S.BRIGHT),
                     from_user=f.collect_FU(message)
@@ -109,38 +110,59 @@ async def input_promo(message: Message, state: FSMContext):
 async def activate_promo(callback: CallbackQuery, state: FSMContext):
     try:
         f.update_config(config, [txt, main_keyboard])
-        coupon_id = (await state.get_data())["COUPON_ID"]
         coupons = await f.read_sublist("promo")
         keys = list(coupons.keys())
         for key in keys:
             if key != key.lower():
                 coupons[key.lower()] = coupons[key]
                 coupons.pop(key)
-        coupon = coupons[coupon_id].rsplit(';', 2)
-        coupon[2] = '0'
-        exelink.sublist(
-            name="promo",
-            key=coupon_id,
-            data=';'.join(coupon),
-            userID=callback.from_user.id
-        )
-        lpsql.deposit(callback.from_user.id, int(coupon[1]), f"_promo:{coupon_id}")
-        await callback.message.edit_text(callback.message.text + "\n> Активирован")
-        await callback.message.answer(txt.MAIN.PROMO_CODE.ACTIVATE)
-        await callback.message.answer(txt.MAIN.DEPOSIT.UPDATE.format(value=f'+{coupon[1]}'),
-                                      reply_markup=main_keyboard.update_keyboard(callback.from_user.id))
+
+        try:
+            coupon_id = (await state.get_data())["COUPON_ID"]
+        except KeyError:
+            coupon_id = None
+        if coupon_id in coupons.keys():
+            coupon = coupons[coupon_id].rsplit(';', 2)
+            if coupon[2] == '1':
+                coupon[2] = '0'
+                exelink.sublist(
+                    name="promo",
+                    key=coupon_id,
+                    data=';'.join(coupon),
+                    userID=callback.from_user.id
+                )
+                lpsql.deposit(callback.from_user.id, int(coupon[1]), f"_promo:{coupon_id}")
+                await callback.message.edit_text(callback.message.text + "\n\n> Активирован")
+                await callback.message.answer(txt.MAIN.PROMO_CODE.ACTIVATE)
+                await callback.message.answer(txt.MAIN.DEPOSIT.UPDATE.format(value=f'+{coupon[1]}'),
+                                              reply_markup=main_keyboard.update_keyboard(callback.from_user.id))
+                exelink.sublist(
+                    mode='remove',
+                    name='ccc/main',
+                    key=callback.message.chat.id,
+                    userID=callback.from_user.id
+                )
+                tracker.log(
+                    command=("PROMOCODE", F.YELLOW + S.BRIGHT),
+                    status=("ACTIVATED", F.GREEN),
+                    from_user=f.collect_FU(callback)
+                )
+            else:
+                await callback.message.edit_text(callback.message.text + "\n\n> " + txt.MAIN.PROMO_CODE.ALREADY_ACTIVATED[1:])
+                tracker.log(
+                    command=("PROMOCODE", F.YELLOW + S.BRIGHT),
+                    status=("ALREADY_ACTIVATED", F.RED + S.DIM),
+                    from_user=f.collect_FU(callback)
+                )
+        else:
+            await callback.message.edit_text(callback.message.text + "\n\n> " + txt.MAIN.PROMO_CODE.BECOME_BAD_ID[1:])
+            tracker.log(
+                command=("PROMOCODE", F.YELLOW + S.BRIGHT),
+                status=("BECOME_BAD_ID", F.RED + S.DIM),
+                from_user=f.collect_FU(callback)
+            )
+
         await callback.answer()
-        exelink.sublist(
-            mode='remove',
-            name='ccc/main',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
-        )
-        tracker.log(
-            command=("PROMOCODE", F.YELLOW + S.BRIGHT),
-            status=("ACTIVATED", F.GREEN),
-            from_user=f.collect_FU(callback)
-        )
     except Exception as e:
         tracker.error(
             e=e,
