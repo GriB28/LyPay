@@ -17,6 +17,7 @@ from source.LPAA._states import *
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('LPAA')
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/deposit router")
 
 
@@ -76,7 +77,7 @@ async def deposit_id(message: Message, state: FSMContext):
         if firewall_status == firewall3.WHITE_ANCHOR:
             try:
                 if not (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["auction"] or len(message.text) > 3:
-                    if int(message.text) in lpsql.searchall("users", "ID"):
+                    if int(message.text) in db.searchall("users", "ID"):
                         await state.update_data(DEPOSIT_QR=int(message.text))
                         await state.update_data(DEPOSIT_MODE="normal")
                         await message.answer(txt.LPAA.DEPOSIT.SET_AMOUNT)
@@ -84,8 +85,8 @@ async def deposit_id(message: Message, state: FSMContext):
                     else:
                         await message.answer(txt.LPAA.WRONG)
                 else:
-                    if int(message.text) in lpsql.searchall("stores", "auctionID"):
-                        await state.update_data(DEPOSIT_QR=lpsql.search("stores", "auctionID", int(message.text))["ID"])
+                    if int(message.text) in db.searchall("stores", "auctionID"):
+                        await state.update_data(DEPOSIT_QR=db.search("stores", "auctionID", int(message.text))["ID"])
                         await state.update_data(DEPOSIT_MODE="auction")
                         await message.answer(txt.LPAA.DEPOSIT.SET_AMOUNT)
                         await state.set_state(DepositFSM.DEPOSIT_AMOUNT)
@@ -124,7 +125,7 @@ async def set_amount(message: Message, state: FSMContext):
             mode = (await state.get_data())["DEPOSIT_MODE"]
 
             if mode == "normal":
-                user = lpsql.search("users", "ID", (await state.get_data())["DEPOSIT_QR"])
+                user = db.search("users", "ID", (await state.get_data())["DEPOSIT_QR"])
                 await message.answer(txt.LPAA.DEPOSIT.CONFIRM.format(
                     user=user["name"],
                     group=user["class"],
@@ -132,8 +133,8 @@ async def set_amount(message: Message, state: FSMContext):
                     amount=amount)
                 )
             else:
-                store = lpsql.search("stores", "ID", (await state.get_data())["DEPOSIT_QR"])
-                host = lpsql.search("users", "ID", store["hostID"])
+                store = db.search("stores", "ID", (await state.get_data())["DEPOSIT_QR"])
+                host = db.search("users", "ID", store["hostID"])
                 if host is None:
                     host = {
                         "name": "незарегистрированный пользователь",
@@ -166,7 +167,7 @@ async def confirm(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
         data = await state.get_data()
-        lpsql.deposit(data["DEPOSIT_QR"], data["DEPOSIT_AMOUNT"], message.from_user.id)
+        db.deposit(data["DEPOSIT_QR"], data["DEPOSIT_AMOUNT"], message.from_user.id)
 
         if data["DEPOSIT_MODE"] == "normal":
             exelink.message(
@@ -183,7 +184,7 @@ async def confirm(message: Message, state: FSMContext):
                 message_text = cfg.VALUTA.MANUAL_REDACT_p.format(amount=data["DEPOSIT_AMOUNT"])
             else:
                 message_text = cfg.VALUTA.MANUAL_REDACT_m.format(amount=-data["DEPOSIT_AMOUNT"])
-            for userID in lpsql.search("shopkeepers", "storeID", data["DEPOSIT_QR"], True):
+            for userID in db.search("shopkeepers", "storeID", data["DEPOSIT_QR"], True):
                 exelink.message(
                     text=message_text,
                     bot="LPSB",
@@ -212,8 +213,8 @@ async def confirm(message: Message, state: FSMContext):
 async def high_deposit(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
-        sid = lpsql.search("shopkeepers", "userID", message.from_user.id)
-        all_stores = lpsql.searchall("stores", "ID")
+        sid = db.search("shopkeepers", "userID", message.from_user.id)
+        all_stores = db.searchall("stores", "ID")
         if len(all_stores) > 0:
             await message.answer(txt.LPAA.DEPOSIT.HIGH.START.format(
                 uid=message.from_user.id,
@@ -248,7 +249,7 @@ async def high_deposit_choose_id(message: Message, state: FSMContext):
             except:
                 await message.answer(txt.LPAA.BAD_ARG)
                 return
-            if user not in lpsql.searchall("users", "ID"):
+            if user not in db.searchall("users", "ID"):
                 await message.answer(txt.LPAA.WRONG)
                 return
             await state.update_data(HIGH_DEPOSIT_ID=user)
@@ -261,7 +262,7 @@ async def high_deposit_choose_id(message: Message, state: FSMContext):
             )
         elif pick[0] == 's':
             store = pick[1:]
-            if store not in lpsql.searchall("stores", "ID"):
+            if store not in db.searchall("stores", "ID"):
                 await message.answer(txt.LPAA.WRONG)
                 return
             await state.update_data(HIGH_DEPOSIT_ID=store)
@@ -324,7 +325,7 @@ async def high_deposit_confirm(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
         data = await state.get_data()
-        lpsql.deposit(data["HIGH_DEPOSIT_ID"], data["HIGH_DEPOSIT_AMOUNT"], message.from_user.id)
+        db.deposit(data["HIGH_DEPOSIT_ID"], data["HIGH_DEPOSIT_AMOUNT"], message.from_user.id)
         if data["HIGH_DEPOSIT_AMOUNT"] > 0:
             message_text = cfg.VALUTA.MANUAL_REDACT_p.format(amount=data["HIGH_DEPOSIT_AMOUNT"])
         else:
@@ -339,7 +340,7 @@ async def high_deposit_confirm(message: Message, state: FSMContext):
                 userID=message.from_user.id
             )
         else:
-            for userID in lpsql.search("shopkeepers", "storeID", data["HIGH_DEPOSIT_ID"], True):
+            for userID in db.search("shopkeepers", "storeID", data["HIGH_DEPOSIT_ID"], True):
                 exelink.message(
                     text=message_text,
                     bot="LPSB",

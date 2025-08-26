@@ -16,6 +16,7 @@ from source.MAIN._states import *
 rtr = Router()
 config = [j2_fromfile(PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('MAIN')
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/coupon router")
 
 
@@ -131,7 +132,7 @@ async def activate_promo(callback: CallbackQuery, state: FSMContext):
                     data=';'.join(coupon),
                     userID=callback.from_user.id
                 )
-                lpsql.deposit(callback.from_user.id, int(coupon[1]), f"_promo:{coupon_id}")
+                db.deposit(callback.from_user.id, int(coupon[1]), f"_promo:{coupon_id}")
                 await callback.message.edit_text(callback.message.text + "\n\n> Активирован")
                 await callback.message.answer(txt.MAIN.PROMO_CODE.ACTIVATE)
                 await callback.message.answer(txt.MAIN.DEPOSIT.UPDATE.format(value=f'+{coupon[1]}'),

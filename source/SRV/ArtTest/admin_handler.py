@@ -15,6 +15,7 @@ from data import txt
 
 rtr = Router()
 firewall3 = firewall3.FireWall('MAIN', silent=True)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("SRV/admin_handler router")
 
 
@@ -154,8 +155,8 @@ async def reset_test_num(message: Message, state: FSMContext):
             )
             if exists(PATHS.LISTS + "arttest"):
                 rmtree(PATHS.LISTS + "arttest")
-            lpsql.manual("delete from arttest_test1")
-            lpsql.manual("delete from arttest_test4")
+            db.manual("delete from arttest_test1")
+            db.manual("delete from arttest_test4")
             await sleep(.95)
             await update_keyboards("===")
             await message.answer(f"Текущий тест сброшен (удалены все материалы).")
@@ -176,7 +177,7 @@ async def reset_test_num(message: Message, state: FSMContext):
 
 
 async def update_keyboards(text: str):
-    for user in lpsql.searchall("users", "ID"):
+    for user in db.searchall("users", "ID"):
         exelink.message(
             text=text,
             bot='MAIN',

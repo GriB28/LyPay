@@ -15,6 +15,7 @@ from source.LPSB._states import *
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPSB", silent=False)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/abstract router")
 
 
@@ -23,7 +24,7 @@ async def start(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
         await message.answer(txt.LPSB.CMD.START)
-        if message.from_user.id not in lpsql.searchall("shopkeepers", "userID"):
+        if message.from_user.id not in db.searchall("shopkeepers", "userID"):
             if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["lpsb_can_register"]:
                 await message.answer(txt.LPSB.REGISTRATION.CHECK_CODE)
                 await state.set_state(RegistrationFSM.CHECK_CODE)
@@ -84,12 +85,12 @@ async def cancel(message: Message, state: FSMContext):
                 await state.clear()
 
                 try:
-                    storeID = lpsql.search("shopkeepers", "userID", message.from_user.id)
+                    storeID = db.search("shopkeepers", "userID", message.from_user.id)
                     if storeID is None:
                         return
                     storeID = storeID["storeID"]
                     while True:
-                        lpsql.delete("changing", message.from_user.id, storeID)
+                        db.delete("changing", message.from_user.id, storeID)
                 except lpsql.errors.EntryNotFound:
                     pass
         elif firewall_status == firewall3.BLACK_ANCHOR:

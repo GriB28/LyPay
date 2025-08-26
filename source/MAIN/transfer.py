@@ -17,6 +17,7 @@ from source.MAIN._states import *
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('MAIN')
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/transfer router")
 
 
@@ -24,7 +25,7 @@ print("MAIN/transfer router")
 async def transfer(message: Message):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
-        if message.from_user.id in lpsql.searchall("users", "ID"):
+        if message.from_user.id in db.searchall("users", "ID"):
             firewall_status = firewall3.check(message.from_user.id)
             if firewall_status == firewall3.WHITE_ANCHOR:
                 await message.answer(txt.MAIN.TRANSFER.START_0,
@@ -133,7 +134,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
         if mode == 0:  # by id
             try:
                 text = int(text)
-                if text not in lpsql.searchall("users", "ID"):
+                if text not in db.searchall("users", "ID"):
                     await message.answer(txt.MAIN.TRANSFER.USER_NOT_REGISTERED)
                 else:
                     ok = True
@@ -151,8 +152,8 @@ async def transfer_get_user(message: Message, state: FSMContext):
                 )
         elif mode == 1:  # by tag
             text = text.replace('@', '').replace('https://t.me/', '')
-            for userID in lpsql.searchall("users", "ID"):
-                search_tag = lpsql.search("users", "ID", userID)["tag"]
+            for userID in db.searchall("users", "ID"):
+                search_tag = db.search("users", "ID", userID)["tag"]
                 if search_tag is not None and search_tag.lower() == text.lower():
                     ok = True
                     text = userID
@@ -172,8 +173,8 @@ async def transfer_get_user(message: Message, state: FSMContext):
         elif mode == 2:  # by name
             text = text.capitalize()
             found = list()
-            for userID in lpsql.searchall("users", "ID"):
-                if lpsql.search("users", "ID", userID)["name"].split()[-1] == text:
+            for userID in db.searchall("users", "ID"):
+                if db.search("users", "ID", userID)["name"].split()[-1] == text:
                     ok = True
                     found.append(userID)
             if ok:
@@ -214,7 +215,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
                 await message.answer(txt.MAIN.TRANSFER.SELF)
             else:
                 await state.set_state(TransferFSM.CONFIRM1)
-                user = lpsql.search("users", "ID", text)
+                user = db.search("users", "ID", text)
                 if mode == 1:
                     await message.answer(txt.MAIN.TRANSFER.CONFIRM1.NAME_LESS.format(
                         tag=user["tag"]
@@ -245,7 +246,7 @@ async def transfer_confirm1(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         await state.set_state(TransferFSM.INPUT)
         await message.answer(txt.MAIN.TRANSFER.INPUT.format(
-            balance=lpsql.balance_view(message.from_user.id)
+            balance=db.balance_view(message.from_user.id)
         ))
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
@@ -273,8 +274,8 @@ async def transfer_get_amount(message: Message, state: FSMContext):
         try:
             amount = int(message.text)
             if amount > 0:
-                amount_ = lpsql.balance_view(message.from_user.id)
-                to_ = lpsql.search("users", "ID", (await state.get_data())["USER"])
+                amount_ = db.balance_view(message.from_user.id)
+                to_ = db.search("users", "ID", (await state.get_data())["USER"])
                 if amount <= amount_:
                     await state.update_data(INPUT=amount)
                     mode = (await state.get_data())["MODE"]
@@ -330,8 +331,8 @@ async def transfer_confirm2(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
-        from_ = lpsql.search("users", "ID", message.from_user.id)
-        lpsql.transfer(message.from_user.id, data["USER"], data["INPUT"])
+        from_ = db.search("users", "ID", message.from_user.id)
+        db.transfer(message.from_user.id, data["USER"], data["INPUT"])
 
         await message.bot.send_message(
             text=txt.MAIN.TRANSFER.UPDATE.format(

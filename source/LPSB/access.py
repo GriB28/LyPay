@@ -19,6 +19,7 @@ import source.LPSB._keyboards as main_keyboard
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/access router")
 
 
@@ -33,8 +34,8 @@ async def access(message: Message, state: FSMContext):
                     current not in MenuFSM.__states__ and \
                     current not in AccessFSM.__states__ and \
                     current not in AdFSM.__states__ and \
-                    message.from_user.id in lpsql.searchall("shopkeepers", "userID"):
-                store = lpsql.search("stores", "ID", lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"])
+                    message.from_user.id in db.searchall("shopkeepers", "userID"):
+                store = db.search("stores", "ID", db.search("shopkeepers", "userID", message.from_user.id)["storeID"])
                 if store["hostID"] == message.from_user.id:
                     await state.set_state(AccessFSM.MENU)
                     m_id = (await message.answer(
@@ -125,8 +126,8 @@ async def access_add_choose(message: Message, state: FSMContext):
             return
         try:
             user = int(message.text.strip())
-            store = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-            users_store = lpsql.search("shopkeepers", "userID", user)
+            store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            users_store = db.search("shopkeepers", "userID", user)
             if users_store:
                 users_store = users_store
                 if users_store != store:
@@ -144,7 +145,7 @@ async def access_add_choose(message: Message, state: FSMContext):
                         from_user=f.collect_FU(message)
                     )
             else:
-                user = lpsql.search("users", "ID", user)
+                user = db.search("users", "ID", user)
                 if user is None:
                     user = {"name": "незарегистрированный пользователь", "class": "–", "tag": None}
                 await message.answer(txt.LPSB.ACCESS.CONFIRM.format(
@@ -178,8 +179,8 @@ async def access_add_confirm(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         user = (await state.get_data())["PICK"]
-        store = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-        lpsql.insert(
+        store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+        db.insert(
             "shopkeepers",
             [user, store]
         )
@@ -238,7 +239,7 @@ async def access_remove_choose(message: Message, state: FSMContext):
             return
         try:
             user = int(message.text.strip())
-            store = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             if user == message.from_user.id:
                 await message.answer(txt.LPSB.ACCESS.SELF_REMOVE)
                 tracker.log(
@@ -247,10 +248,10 @@ async def access_remove_choose(message: Message, state: FSMContext):
                     from_user=f.collect_FU(message)
                 )
             else:
-                users_store = lpsql.search("shopkeepers", "userID", user)
+                users_store = db.search("shopkeepers", "userID", user)
                 if users_store is not None:
                     if users_store["storeID"] == store:
-                        user = lpsql.search("users", "ID", user)
+                        user = db.search("users", "ID", user)
                         if user is None:
                             user = {"name": "незарегистрированный пользователь", "class": "–", "tag": None}
                         await message.answer(txt.LPSB.ACCESS.CONFIRM.format(
@@ -299,11 +300,11 @@ async def access_remove_confirm(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         user = (await state.get_data())["PICK"]
-        store_id = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+        store_id = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
 
-        lpsql.delete("shopkeepers", user, store_id)
+        db.delete("shopkeepers", user, store_id)
         try:
-            lpsql.delete("changing", user, store_id)
+            db.delete("changing", user, store_id)
         except:
             pass
         firewall3.remove_white(user)
@@ -337,17 +338,17 @@ async def access_monitor(callback: CallbackQuery, state: FSMContext):
 
         userIDs = list(map(
             lambda d: d["userID"],
-            lpsql.search(
+            db.search(
                 "shopkeepers",
                 "storeID",
-                lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"],
+                db.search("shopkeepers", "userID", callback.from_user.id)["storeID"],
                 True
             )
         ))
 
         generated_string = list()
         for id_ in userIDs:
-            user_ = lpsql.search("users", "ID", id_)
+            user_ = db.search("users", "ID", id_)
             if user_ is None:
                 user_ = {"name": "незарегистрированный пользователь", "class": "–", "tag": None}
             generated_string.append(
@@ -374,7 +375,7 @@ async def access_monitor(callback: CallbackQuery, state: FSMContext):
 async def access_request(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
-        if message.from_user.id not in lpsql.searchall("shopkeepers", "userID"):
+        if message.from_user.id not in db.searchall("shopkeepers", "userID"):
             await message.answer(txt.LPSB.ACCESS.ADD.REQUEST_START)
             await state.clear()
             tracker.log(
@@ -383,7 +384,7 @@ async def access_request(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
 
-            qr = lpsql.search("qr", "userID", message.from_user.id)
+            qr = db.search("qr", "userID", message.from_user.id)
             if qr is None or qr["fileID_lpsb"] is None:
                 path = cfg.PATHS.QR + f"{message.from_user.id}.png"
                 if not exists(path):
@@ -391,13 +392,13 @@ async def access_request(message: Message, state: FSMContext):
                     while not exists(path):
                         await sleep(.5)
                 if qr is None:
-                    lpsql.insert("qr", [message.from_user.id, None, None, None])
+                    db.insert("qr", [message.from_user.id, None, None, None])
                 fileid = (await message.answer_photo(
                     FSInputFile(path),
                     caption=f"<code>{message.from_user.id}</code>",
                     has_spoiler=True
                 )).photo[-1].file_id
-                lpsql.update("qr", "userID", message.from_user.id, "fileID_lpsb", fileid)
+                db.update("qr", "userID", message.from_user.id, "fileID_lpsb", fileid)
             else:
                 await message.answer_photo(
                     qr["fileID_lpsb"],

@@ -14,6 +14,7 @@ from data import txt, config as cfg
 rtr = Router()
 firewall3 = firewall3.FireWall('LPSB', silent=False)
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("AUC/abstract router")
 
 
@@ -76,12 +77,12 @@ async def cancel(message: Message, state: FSMContext):
             await state.clear()
 
             try:
-                storeID = lpsql.search("shopkeepers", "userID", message.from_user.id)
+                storeID = db.search("shopkeepers", "userID", message.from_user.id)
                 if storeID is None:
                     return
                 storeID = storeID["storeID"]
                 while True:
-                    lpsql.delete("changing", message.from_user.id, storeID)
+                    db.delete("changing", message.from_user.id, storeID)
             except lpsql.errors.EntryNotFound:
                 pass
         elif firewall_status == firewall3.BLACK_ANCHOR:
@@ -110,7 +111,7 @@ async def balance(message: Message):
         f.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
-            balance_ = lpsql.balance_view(lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"])
+            balance_ = db.balance_view(db.search("shopkeepers", "userID", message.from_user.id)["storeID"])
             await message.answer(f"Ваш баланс: {balance_ if balance_ else 0} {cfg.VALUTA.SHORT}")
             tracker.log(
                 command=("BALANCE", F.MAGENTA + S.DIM),
@@ -141,10 +142,10 @@ async def get_auc_num(message: Message):
         f.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
-            await message.answer(txt.AUC.CMD.AUC_NUM.format(num=lpsql.search(
+            await message.answer(txt.AUC.CMD.AUC_NUM.format(num=db.search(
                 "stores",
                 "ID",
-                lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"])["auctionID"]
+                db.search("shopkeepers", "userID", message.from_user.id)["storeID"])["auctionID"]
             ))
             tracker.log(
                 command=("AUCTION_NUMBER", F.GREEN + S.DIM),

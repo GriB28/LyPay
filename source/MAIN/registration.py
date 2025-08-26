@@ -32,6 +32,7 @@ integration_bridge_jwt = getenv("LYPAY_INTEGRATION_BRIDGE_JWT")
 
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/registration router")
 
 base16 = tuple('0123456789abcdef')
@@ -40,8 +41,8 @@ letters = tuple('абвгдеёжзийклмнопрстуфхцчшщъыьэ�
 
 
 def register_proceed(tg_id: int, name: str, group: str, email: str, tag: str | None, owner: int):
-    lpsql.insert("users",
-                 [
+    db.insert("users",
+              [
                      tg_id,  # ID
                      name,   # name
                      group,  # class
@@ -52,8 +53,8 @@ def register_proceed(tg_id: int, name: str, group: str, email: str, tag: str | N
                  ])
     if not exists(cfg.PATHS.QR + f"{tg_id}.png"):
         exelink.add(f"qr {tg_id}", tg_id)
-        lpsql.insert("qr",
-                     [
+        db.insert("qr",
+                  [
                          tg_id,  # userID
                          None,   # fileID_main
                          None,   # fileID_lpsb
@@ -131,7 +132,7 @@ async def send_email(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
             await message.answer(txt.MAIN.REGISTRATION.EMAIL.BAD)
-        elif em not in lpsql.searchall("corporation", "email"):
+        elif em not in db.searchall("corporation", "email"):
             tracker.log(
                 command=("REGISTRATION_EMAIL", F.YELLOW),
                 status=("NOT_FOUND", F.RED),
@@ -199,7 +200,7 @@ async def check_email_code(message: Message, state: FSMContext):
                 await state.set_state(RegisterFSM.GUEST_NAME_INPUT)
 
             else:
-                user = lpsql.search("corporation", "email", data["EMAIL"])
+                user = db.search("corporation", "email", data["EMAIL"])
                 register_proceed(
                     message.from_user.id,
                     user["name"],
@@ -383,7 +384,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                     )
                 else:
                     decoded_email = decoded_json["email"]
-                    base_request = lpsql.search("corporation", "email", decoded_email)
+                    base_request = db.search("corporation", "email", decoded_email)
                     if base_request is None:
                         await message.answer(txt.MAIN.REGISTRATION.LINK.BAD_EMAIL_CHECK)
                         m_id = (await message.answer(
@@ -484,7 +485,7 @@ async def link_confirm(callback: CallbackQuery, state: FSMContext):
 
         decoded_json = (await state.get_data())["JWT"]
         decoded_email = decoded_json["email"]
-        base_request = lpsql.search("corporation", "email", decoded_email)
+        base_request = db.search("corporation", "email", decoded_email)
         decoded_class = 'сотрудник' if decoded_json["role"] in ("admin", "teacher") else \
             ('гость' if decoded_json["role"][:6] == "parent" else None)
         if decoded_class is None:

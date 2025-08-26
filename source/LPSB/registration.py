@@ -18,6 +18,7 @@ import source.LPSB._keyboards as main_keyboard
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/registration router")
 
 
@@ -212,7 +213,7 @@ async def get_id(message: Message, state: FSMContext):
     ids = set()
     for __ in range(10):
         id_ = letters[randint(0, 15)] + letters[randint(0, 15)] + letters[randint(0, 15)]
-        while id_ in ids or id_ in lpsql.searchall("stores", "ID"):
+        while id_ in ids or id_ in db.searchall("stores", "ID"):
             id_ = letters[randint(0, 15)] + letters[randint(0, 15)] + letters[randint(0, 15)]
         ids.add(id_)
 
@@ -238,13 +239,7 @@ async def end_reg(callback: CallbackQuery, state: FSMContext):
         data = await state.get_data()
         chosen = callback.data.replace('_cb_id', '')
 
-        '''
-        last_auc_id = lpsql.searchall("stores", "auctionID")
-        if len(last_auc_id) == 0:
-            last_auc_id = [0]
-        '''
-
-        lpsql.insert(
+        db.insert(
             "stores",
             [
                 chosen,                         # ID
@@ -258,14 +253,14 @@ async def end_reg(callback: CallbackQuery, state: FSMContext):
                 None,                           # placeID
             ]
         )
-        lpsql.insert(
+        db.insert(
             "shopkeepers",
             [
                 callback.from_user.id,  # userID
                 chosen                  # storeID
             ]
         )
-        lpsql.insert(
+        db.insert(
             "logotypes",
             [
                 chosen,     # storeID
@@ -288,7 +283,7 @@ async def end_reg(callback: CallbackQuery, state: FSMContext):
                 path=cfg.PATHS.STORES_LOGOS + f"{chosen}.jpg",
                 userID=callback.from_user.id
             )
-            lpsql.update("logotypes", "storeID", chosen, "fileID_lpsb", data["LOGO"])
+            db.update("logotypes", "storeID", chosen, "fileID_lpsb", data["LOGO"])
 
         await callback.message.edit_text(txt.LPSB.REGISTRATION.END.format(id=chosen))
         await callback.answer()

@@ -19,6 +19,7 @@ import source.LPSB._keyboards as main_keyboard
 
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/menu/items subrouter")
 
 
@@ -50,7 +51,7 @@ async def display_current_items(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(f"{callback.message.text}\n> 'Текущий ассортимент'")
         await callback.answer()
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             path_ = cfg.PATHS.STORES_KEYBOARDS + id_
             if exists(path_):
                 listdir_ = listdir(path_)
@@ -95,9 +96,9 @@ async def create_new_item(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(f"{callback.message.text}\n> 'Добавить новые товары'")
         await callback.answer()
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             path_ = cfg.PATHS.STORES_KEYBOARDS + id_
-            lpsql.insert("changing", [callback.from_user.id, id_])
+            db.insert("changing", [callback.from_user.id, id_])
 
             if not exists(path_):
                 mkdir(path_)
@@ -146,11 +147,11 @@ async def stop_filling(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         data = (await state.get_data())["ITEMS_NEW"]
         try:
-            id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             path = cfg.PATHS.STORES_KEYBOARDS + id_
             try:
                 while True:
-                    lpsql.delete("changing", message.from_user.id, id_)
+                    db.delete("changing", message.from_user.id, id_)
             except lpsql.errors.EntryNotFound:
                 pass
 
@@ -248,10 +249,10 @@ async def delete_items(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
 
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             try:
                 while True:
-                    lpsql.delete("changing", callback.from_user.id, id_)
+                    db.delete("changing", callback.from_user.id, id_)
             except lpsql.errors.EntryNotFound:
                 pass
 
@@ -295,13 +296,13 @@ async def delete_items_confirmed(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         if message.text == "ПОДТВЕРЖДАЮ":
             try:
-                id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+                id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
                 path_ = cfg.PATHS.STORES_KEYBOARDS + id_
                 rmtree(path_)
                 mkdir(path_)
                 try:
                     while True:
-                        lpsql.delete("changing", message.from_user.id, id_)
+                        db.delete("changing", message.from_user.id, id_)
                 except lpsql.errors.EntryNotFound:
                     pass
 
@@ -343,10 +344,10 @@ async def edit_items(callback: CallbackQuery, state: FSMContext):
         await state.set_state(MenuFSM.ITEMS_EDIT)
 
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             try:
                 while True:
-                    lpsql.delete("changing", callback.from_user.id, id_)
+                    db.delete("changing", callback.from_user.id, id_)
             except lpsql.errors.EntryNotFound:
                 pass
 
@@ -387,7 +388,7 @@ async def edit_items(callback: CallbackQuery, state: FSMContext):
 
 async def edit_item(message: Message, callback: CallbackQuery, state: FSMContext, n: int):
     try:
-        id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+        id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
         path_ = cfg.PATHS.STORES_KEYBOARDS + id_
         if exists(path_) and len(listdir(path_)) > 0:
             if n > i.to_int(listdir(path_)[-1][:-5]):
@@ -401,7 +402,7 @@ async def edit_item(message: Message, callback: CallbackQuery, state: FSMContext
                 )
                 try:
                     while True:
-                        lpsql.delete("changing", message.from_user.id, id_)
+                        db.delete("changing", message.from_user.id, id_)
                 except lpsql.errors.EntryNotFound:
                     pass
                 return
@@ -418,7 +419,7 @@ async def edit_item(message: Message, callback: CallbackQuery, state: FSMContext
         else:
             try:
                 while True:
-                    lpsql.delete("changing", message.from_user.id, id_)
+                    db.delete("changing", message.from_user.id, id_)
             except lpsql.errors.EntryNotFound:
                 pass
 
@@ -437,10 +438,10 @@ async def edit_item(message: Message, callback: CallbackQuery, state: FSMContext
             )
     except:
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             try:
                 while True:
-                    lpsql.delete("changing", message.from_user.id, id_)
+                    db.delete("changing", message.from_user.id, id_)
             except lpsql.errors.EntryNotFound:
                 pass
         except:
@@ -499,7 +500,7 @@ async def edit_item_data(message: Message, state: FSMContext):
             return
         data = (await state.get_data())
         try:
-            id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             try:
                 n = data["ITEMS_EDIT"]
                 split_ = message.text.split('/')
@@ -562,7 +563,7 @@ async def edit_item_data(message: Message, state: FSMContext):
 
                 try:
                     while True:
-                        lpsql.delete("changing", message.from_user.id, id_)
+                        db.delete("changing", message.from_user.id, id_)
                 except lpsql.errors.EntryNotFound:
                     pass
 
@@ -615,7 +616,7 @@ async def delete_item_data(callback: CallbackQuery, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             path_ = cfg.PATHS.STORES_KEYBOARDS + id_
             data = (await state.get_data())["ITEMS_EDIT"]
             for k in range(data, i.to_int(listdir(path_)[-1][:-5])):
@@ -731,11 +732,11 @@ async def back(callback: CallbackQuery, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         await state.clear()
         await state.set_state(MenuFSM.MENU)
-        storeID = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+        storeID = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
         await callback.message.edit_text(
             txt.LPSB.CMD.MENU_TABLET.format(
                 id=storeID,
-                balance=lpsql.balance_view(storeID)
+                balance=db.balance_view(storeID)
             ),
             reply_markup=main_keyboard.menuCMD["main"]
         )

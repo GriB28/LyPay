@@ -18,6 +18,7 @@ import source.LPSB._keyboards as main_keyboard
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/ad router")
 
 
@@ -32,8 +33,8 @@ async def ad(message: Message, state: FSMContext):
                     current not in MenuFSM.__states__ and \
                     current not in AccessFSM.__states__ and \
                     current not in AdFSM.__states__ and \
-                    message.from_user.id in lpsql.searchall("shopkeepers", "userID"):
-                store_id = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+                    message.from_user.id in db.searchall("shopkeepers", "userID"):
+                store_id = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
                 if not (await j_fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["lpsb_can_send_ad"]:
                     await message.answer(txt.LPSB.AD.FORBIDDEN_BY_SETTINGS)
                     tracker.log(
@@ -255,12 +256,12 @@ async def to_preview(callback: CallbackQuery, state: FSMContext):
             else:
                 await callback.message.answer(text)
                 await state.update_data(AD_CACHED=f"::{text}")
-            store_id = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            store_id = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
             await state.update_data(AD_TECH_DATA=txt.LPSB.AD.TECH_DATA.format(
                 tag=('@'+callback.from_user.username) if callback.from_user.username is not None else '–',
                 user_id=callback.from_user.id,
                 store_id=store_id,
-                host=lpsql.search("stores", "ID", store_id)["hostEmail"],
+                host=db.search("stores", "ID", store_id)["hostEmail"],
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id
             ))
@@ -309,12 +310,12 @@ async def cancel_this(callback: CallbackQuery, state: FSMContext):
         await state.clear()
 
         try:
-            storeID = lpsql.search("shopkeepers", "userID", callback.from_user.id)
+            storeID = db.search("shopkeepers", "userID", callback.from_user.id)
             if storeID is None:
                 return
             storeID = storeID["storeID"]
             while True:
-                lpsql.delete("changing", callback.from_user.id, storeID)
+                db.delete("changing", callback.from_user.id, storeID)
         except lpsql.errors.EntryNotFound:
             pass
     except Exception as e:

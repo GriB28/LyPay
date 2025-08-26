@@ -17,6 +17,7 @@ from source.LPAA._states import *
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('LPAA')
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/registration router")
 
 
@@ -57,9 +58,9 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
             status=("EXISTING_RECORD", F.RED + S.DIM),
             from_user=f.collect_FU(message)
         )
-    elif text in lpsql.searchall("stores", "hostEmail"):
+    elif text in db.searchall("stores", "hostEmail"):
         await message.answer(txt.LPAA.STORE_REGISTER.STORE_EXIST.format(
-            id=lpsql.search("stores", "hostEmail", text)["ID"])
+            id=db.search("stores", "hostEmail", text)["ID"])
         )
         tracker.log(
             command=("STORE_REGISTER", F.YELLOW),

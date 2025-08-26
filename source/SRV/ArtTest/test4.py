@@ -13,6 +13,7 @@ from data import txt
 
 rtr = Router()
 firewall3 = firewall3.FireWall('MAIN', silent=True)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("SRV/test4_1x5 router")
 
 
@@ -31,11 +32,11 @@ async def test(message: Message, state: FSMContext):
             except KeyError:
                 await state.update_data(TEST4=1)
 
-            lpsql.insert("arttest_test4", [str(randint(0, 1000000000))+str(raw_unix()), message.from_user.id])
-            lpsql.insert("arttest_test4", [str(randint(0, 1000000000))+str(raw_unix()), message.from_user.id])
-            lpsql.insert("arttest_test4", [str(randint(0, 1000000000))+str(raw_unix()), message.from_user.id])
-            lpsql.insert("arttest_test4", [str(randint(0, 1000000000))+str(raw_unix()), message.from_user.id])
-            lpsql.insert("arttest_test4", [str(randint(0, 1000000000))+str(raw_unix()), message.from_user.id])
+            db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
+            db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
+            db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
+            db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
+            db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
             tracker.black(f.collect_FU(message))
@@ -64,7 +65,7 @@ async def test_end(message: Message, state: FSMContext):
                 )
 
                 await message.answer(str(answer * 5))
-                await message.answer(str(lpsql.searchall("arttest_test4", "ID").count(message.from_user.id)))
+                await message.answer(str(db.searchall("arttest_test4", "ID").count(message.from_user.id)))
                 await state.clear()
             except KeyError:
                 pass

@@ -12,6 +12,7 @@ from data import config as cfg, txt
 
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/cheques router")
 
 
@@ -68,7 +69,7 @@ async def confirm_cancelling_cheque(callback: CallbackQuery):
             with open(cfg.PATHS.STORES_CHEQUES + f"{cheque_id}.json", 'w', encoding='utf8') as file:
                 file.write(j2.to_(cheque))
 
-            lpsql.transfer(cheque_id.split('_')[1], cheque["customer"], cheque["price"])
+            db.transfer(cheque_id.split('_')[1], cheque["customer"], cheque["price"])
 
             await callback.message.edit_text(txt.LPSB.CHEQUE.RETURN.format(amount=cheque["price"]))
             exelink.message(

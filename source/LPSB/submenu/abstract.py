@@ -16,6 +16,7 @@ from source.LPSB._states import *
 
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/menu/abstract subrouter")
 
 
@@ -26,7 +27,7 @@ async def statistics(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Главное меню\n> 'Статистика 📈'")
         await callback.answer()
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
 
             items_ = dict()
             balance_ = 0
@@ -76,7 +77,7 @@ async def statistics(callback: CallbackQuery, state: FSMContext):
         )
 
 
-async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, list[dict[str, any]], int]:
+async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, list[dict[str, ...]], int]:
     """
     :param store_id: ID магазина
     :return: tuple(клавиатура с товарами, список распакованных товров, количество товаров в клавиатуре)
@@ -110,10 +111,10 @@ async def preview(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Главное меню\n> 'Предпросмотр 📲'")
         await callback.answer()
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
-            store = lpsql.search("stores", "ID", id_)
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            store = db.search("stores", "ID", id_)
             if store["logo"]:
-                logo = lpsql.search("logotypes", "storeID", id_)
+                logo = db.search("logotypes", "storeID", id_)
                 if logo is None or logo["fileID_lpsb"] is None:
                     fileid = (await callback.message.answer_photo(FSInputFile(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg"),
                                                                   caption=txt.MAIN.STORE.ID_OK.format(
@@ -121,10 +122,10 @@ async def preview(callback: CallbackQuery, state: FSMContext):
                                                                       description=store["description"]
                                                                   ))).photo[-1].file_id
                     try:
-                        lpsql.update("logotypes", "storeID", id_, "fileID_lpsb", fileid)
+                        db.update("logotypes", "storeID", id_, "fileID_lpsb", fileid)
                     except lpsql.errors.EntryNotFound:
-                        lpsql.insert("logotypes",
-                                     [
+                        db.insert("logotypes",
+                                  [
                                          id_,       # storeID
                                          None,      # fileID_main
                                          fileid     # fileID_lpsb
@@ -145,7 +146,7 @@ async def preview(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(
                 txt.MAIN.STORE.ITEMS.format(
                     items_empty='' if count > 0 else 'в данный момент здесь ничего нет',
-                    flag='' if len(lpsql.search("changing", "storeID", id_, True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
+                    flag='' if len(db.search("changing", "storeID", id_, True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
                 ),
                 reply_markup=keyboard.as_markup()
             )
@@ -182,7 +183,7 @@ async def info(callback: CallbackQuery, state: FSMContext):
         f.update_config(config, [txt, cfg])
         await callback.message.edit_text("Главное меню\n> 'Информация ℹ️'")
         await callback.answer()
-        store = lpsql.search("stores", "ID", lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"])
+        store = db.search("stores", "ID", db.search("shopkeepers", "userID", callback.from_user.id)["storeID"])
         await callback.message.answer_photo(cfg.MEDIA.LPSB_MAP)
         await callback.message.answer_document(
             cfg.MEDIA.MANUAL.LPSB,

@@ -54,6 +54,7 @@ else:
         manual_media_id_r
     )
 bot = Bot(getenv("LYPAY_STORES_TOKEN"), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
 
 async def send_message_(to: int,
@@ -83,7 +84,7 @@ async def send_cheque_(to: str, cheque_id: str):
             keyboard_markup = keyboard_.as_markup()
 
         cheque_ = await j2.fromfile_async(cfg.PATHS.STORES_CHEQUES + f"{cheque_id}.json")
-        user_ = lpsql.search("users", "ID", cheque_["customer"])
+        user_ = db.search("users", "ID", cheque_["customer"])
 
         generated_strings = list()
         items_ = cheque_["items"]
@@ -94,7 +95,7 @@ async def send_cheque_(to: str, cheque_id: str):
             price = items_[_]["price"]
             generated_strings.append(f"{text} × {multy} | {price * multy} {cfg.VALUTA.SHORT}")
 
-        for shopkeeper in map(lambda d: d["userID"], lpsql.search("shopkeepers", "storeID", to, True)):
+        for shopkeeper in map(lambda d: d["userID"], db.search("shopkeepers", "storeID", to, True)):
             await bot.send_message(shopkeeper, txt.LPSB.CHEQUE.TABLET.format(
                 cheque_id=cheque_id,
                 name=user_["name"],

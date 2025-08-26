@@ -19,6 +19,7 @@ import source.LPSB._keyboards as main_keyboard
 
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/menu/settings subrouter")
 
 
@@ -90,9 +91,9 @@ async def settings_set_name(message: Message, state: FSMContext):
                 )
             else:
                 try:
-                    id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-                    lpsql.update("stores", "ID", id_, "name", message.text.strip())
-                    store_host = lpsql.search("stores", "ID", id_)["hostID"]
+                    id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+                    db.update("stores", "ID", id_, "name", message.text.strip())
+                    store_host = db.search("stores", "ID", id_)["hostID"]
                     if message.from_user.id != store_host:
                         await message.bot.send_message(
                             text=txt.LPSB.SETTINGS.HOST_WARNING.NAME.format(id=message.from_user.id),
@@ -192,9 +193,9 @@ async def settings_set_description(message: Message, state: FSMContext):
             )
         else:
             try:
-                id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-                lpsql.update("stores", "ID", id_, "description", message.text.strip())
-                store_host = lpsql.search("stores", "ID", id_)["hostID"]
+                id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+                db.update("stores", "ID", id_, "description", message.text.strip())
+                store_host = db.search("stores", "ID", id_)["hostID"]
                 if message.from_user.id != store_host:
                     await message.bot.send_message(
                         text=txt.LPSB.SETTINGS.HOST_WARNING.DESCRIPTION.format(id=message.from_user.id),
@@ -273,14 +274,14 @@ async def settings_set_logo(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         try:
-            id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-            store = lpsql.search("stores", "ID", id_)
+            id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            store = db.search("stores", "ID", id_)
             if store["logo"] and exists(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg"):
                 async with a_open(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg", 'rb') as logo:
                     async with a_open(cfg.PATHS.OLD_LOGOS + f"{id_}_{int(unix())}.jpg", 'wb') as rewrite:
                         await rewrite.write(await logo.read())
             else:
-                lpsql.update("stores", "ID", id_, "logo", 1)
+                db.update("stores", "ID", id_, "logo", 1)
 
             exelink.photo(
                 bot='LPSB',
@@ -289,16 +290,16 @@ async def settings_set_logo(message: Message, state: FSMContext):
                 userID=message.from_user.id
             )
             try:
-                lpsql.update("logotypes", "storeID", id_, "fileID_lpsb", message.photo[-1].file_id)
+                db.update("logotypes", "storeID", id_, "fileID_lpsb", message.photo[-1].file_id)
             except lpsql.errors.EntryNotFound:
-                lpsql.insert("logotypes",
-                             [
+                db.insert("logotypes",
+                          [
                                  id_,                       # storeID
                                  None,                      # fileID_main
                                  message.photo[-1].file_id  # fileID_lpsb
                              ])
 
-            store_host = lpsql.search("stores", "ID", id_)["hostID"]
+            store_host = db.search("stores", "ID", id_)["hostID"]
             if message.from_user.id != store_host:
                 await message.bot.send_message(
                     text=txt.LPSB.SETTINGS.HOST_WARNING.LOGO.format(id=message.from_user.id),
@@ -369,26 +370,26 @@ async def settings_set_null_logo(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(callback.message.text + '\n> Обнулить логотип 🛑')
         await callback.answer()
         try:
-            id_ = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
-            store = lpsql.search("stores", "ID", id_)
+            id_ = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+            store = db.search("stores", "ID", id_)
             if store["logo"] and exists(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg"):
                 async with a_open(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg", 'rb') as logo:
                     async with a_open(cfg.PATHS.OLD_LOGOS + f"{id_}_{int(unix())}.jpg", 'wb') as rewrite:
                         await rewrite.write(await logo.read())
             remove(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg")
-            lpsql.update("stores", "ID", id_, "logo", 0)
+            db.update("stores", "ID", id_, "logo", 0)
             try:
-                lpsql.update("logotypes", "storeID", id_, "fileID_main", None)
-                lpsql.update("logotypes", "storeID", id_, "fileID_lpsb", None)
+                db.update("logotypes", "storeID", id_, "fileID_main", None)
+                db.update("logotypes", "storeID", id_, "fileID_lpsb", None)
             except lpsql.errors.EntryNotFound:
-                lpsql.insert("logotypes",
-                             [
+                db.insert("logotypes",
+                          [
                                  id_,   # storeID
                                  None,  # fileID_main
                                  None   # fileID_lpsb
                              ])
 
-            store_host = lpsql.search("stores", "ID", id_)["hostID"]
+            store_host = db.search("stores", "ID", id_)["hostID"]
             if callback.from_user.id != store_host:
                 await callback.bot.send_message(
                     text=txt.LPSB.SETTINGS.HOST_WARNING.LOGO.format(id=callback.from_user.id),
@@ -441,11 +442,11 @@ async def back(callback: CallbackQuery, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         await state.clear()
         await state.set_state(MenuFSM.MENU)
-        storeID = lpsql.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
+        storeID = db.search("shopkeepers", "userID", callback.from_user.id)["storeID"]
         await callback.message.edit_text(
             txt.LPSB.CMD.MENU_TABLET.format(
                 id=storeID,
-                balance=lpsql.balance_view(storeID)
+                balance=db.balance_view(storeID)
             ),
             reply_markup=main_keyboard.menuCMD["main"]
         )

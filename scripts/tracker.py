@@ -13,6 +13,7 @@ from data.txt import LPAA as t_LPAA, EXE as t_EXE
 
 c_init(autoreset=True)
 
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
 BOT = ''
 LENGTH = 36
@@ -29,10 +30,10 @@ def startup(bot: str, *updates: str) -> None:
     global BOT
     BOT = bot
 
-    botText = media_text("LyPay | " + bot)
-    versionText = media_text(' '.join(list(VERSION)))
-    print(botText)
-    print(versionText)
+    bot_text = media_text("LyPay | " + bot)
+    version_text = media_text(' '.join(list(VERSION)))
+    print(bot_text)
+    print(version_text)
     print(NAME)
     print("INFO LOGS", datetime.now().strftime('%d/%m/%y'))
     print()
@@ -84,7 +85,7 @@ def log(*, command: tuple[str, str], status: tuple[str, str] = None, from_user: 
         end='   '
     )
     if BOT == "LPSB" or BOT == "AUC":
-        store = lpsql.search("shopkeepers", "userID", from_user[0])
+        store = db.search("shopkeepers", "userID", from_user[0])
         if store:
             print(
                 '[',
@@ -167,14 +168,14 @@ def censor(*, from_user: tuple[int, str | None], text: str, text_length_flag: bo
 
 
 def check(from_user: tuple[int, str | None]) -> bool | None:
-    user = lpsql.search("users", "ID", from_user[0])
+    user = db.search("users", "ID", from_user[0])
     if user is None:
         return None
     return user["tag"] != from_user[1]
 
 
 def update(from_user: tuple[int, str | None]) -> None:
-    lpsql.update("users", "ID", from_user[0], "tag", from_user[1])
+    db.update("users", "ID", from_user[0], "tag", from_user[1])
 
 
 def error(*, e: Exception, userID: int) -> None:

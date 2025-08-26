@@ -18,6 +18,7 @@ from source.LPAA._states import *
 rtr = Router()
 config = [j_fromfile(PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('LPAA', silent=True)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/auction router")
 
 
@@ -27,7 +28,7 @@ async def auction_sequence(message: Message, state: FSMContext):
         f.update_config(config, [txt])
         auc_num = message.text.split()[1:]
         if len(auc_num) == 0:
-            lotIDs = lpsql.searchall("auction", "lotID")
+            lotIDs = db.searchall("auction", "lotID")
             lotID = 1 if len(lotIDs) == 0 else max(lotIDs) + 1
         else:
             lotID = int(auc_num[0])
@@ -102,7 +103,7 @@ async def set_buyer(message: Message, state: FSMContext):
         f.update_config(config, [txt])
         try:
             auc_id = int(message.text)
-            if auc_id not in lpsql.searchall("stores", "auctionID"):
+            if auc_id not in db.searchall("stores", "auctionID"):
                 raise ValueError
 
             await state.update_data(AUC_ID=auc_id)
@@ -149,17 +150,17 @@ async def confirm_buying(callback: CallbackQuery):
         f.update_config(config, [txt])
         await callback.answer()
         saved = dict(zip([None, 'LOT', 'NAME', 'PRICE', 'AUC_ID'], callback.data.split('+')))
-        storeID = lpsql.search("stores", "auctionID", saved["AUC_ID"])["ID"]
+        storeID = db.search("stores", "auctionID", saved["AUC_ID"])["ID"]
         try:
-            lpsql.transfer(storeID, "auction_transfer_route", int(saved["PRICE"]))
-            lpsql.insert("auction", [
+            db.transfer(storeID, "auction_transfer_route", int(saved["PRICE"]))
+            db.insert("auction", [
                 int(saved["LOT"]),      # lotID
                 saved["NAME"],          # name
                 int(saved["PRICE"]),    # price
                 int(saved["AUC_ID"])    # auctionID
             ])
-            for userID in lpsql.searchall("shopkeepers", "userID"):
-                if lpsql.search("shopkeepers", "userID", userID)["storeID"] == storeID:
+            for userID in db.searchall("shopkeepers", "userID"):
+                if db.search("shopkeepers", "userID", userID)["storeID"] == storeID:
                     exelink.message(
                         text=txt.LPAA.AUCTION.MESSAGE.format(
                             lot=saved["LOT"],
@@ -185,7 +186,7 @@ async def confirm_buying(callback: CallbackQuery):
         except lpsql.errors.NotEnoughBalance:
             await callback.message.answer(txt.LPAA.AUCTION.NOT_ENOUGH_MONEY.format(
                 lotID=saved["LOT"],
-                balance=lpsql.balance_view(storeID)
+                balance=db.balance_view(storeID)
             ))
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),

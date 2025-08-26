@@ -17,6 +17,7 @@ from source.MAIN._states import *
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('MAIN', silent=False)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/abstract router")
 
 
@@ -32,7 +33,7 @@ async def launch(message: Message, state: FSMContext):
             )
             await message.answer(txt.MAIN.CMD.START, reply_markup=main_keyboard.startCMD)
 
-            if message.from_user.id not in lpsql.searchall("users", "ID"):
+            if message.from_user.id not in db.searchall("users", "ID"):
                 m_id = (await message.answer(
                     txt.MAIN.REGISTRATION.NEW,
                     reply_markup=main_keyboard.registerCMD,
@@ -60,7 +61,7 @@ async def launch(message: Message, state: FSMContext):
                 if read_sublist is None or uid not in read_sublist.keys() or read_sublist[uid] != date:
                     await message.answer_sticker(cfg.MEDIA.FROG_HELLO)
                     await message.answer(txt.MAIN.REGISTRATION.HI_FROG.format(
-                        name=' '.join(lpsql.search("users", "ID", message.from_user.id)["name"].split()[:-1])
+                        name=' '.join(db.search("users", "ID", message.from_user.id)["name"].split()[:-1])
                     ))
                     exelink.sublist(
                         mode='add',
@@ -144,7 +145,7 @@ async def deposit(message: Message):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["main_can_deposit"]:
-            if message.from_user.id in lpsql.searchall("users", "ID"):
+            if message.from_user.id in db.searchall("users", "ID"):
                 firewall_status = firewall3.check(message.from_user.id)
                 if firewall_status == firewall3.WHITE_ANCHOR:
                     tracker.log(
@@ -152,11 +153,11 @@ async def deposit(message: Message):
                         status=("SUCCESS", F.GREEN + S.BRIGHT),
                         from_user=f.collect_FU(message)
                     )
-                    qr = lpsql.search("qr", "userID", message.from_user.id)
+                    qr = db.search("qr", "userID", message.from_user.id)
                     if qr is None or qr["fileID_main"] is None:
                         fileid = (await message.answer_photo(FSInputFile(cfg.PATHS.QR + str(message.from_user.id) + '.png'),
                                                              txt.MAIN.DEPOSIT.MAIN, has_spoiler=True)).photo[-1].file_id
-                        lpsql.update("qr", "userID", message.from_user.id, "fileID_main", fileid)
+                        db.update("qr", "userID", message.from_user.id, "fileID_main", fileid)
                     else:
                         await message.answer_photo(qr["fileID_main"], txt.MAIN.DEPOSIT.MAIN, has_spoiler=True)
                 elif firewall_status == firewall3.BLACK_ANCHOR:
@@ -193,7 +194,7 @@ async def balance(message: Message):
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             try:
-                balance_ = lpsql.balance_view(message.from_user.id)
+                balance_ = db.balance_view(message.from_user.id)
                 await message.answer(f"Ваш баланс: {balance_ if balance_ else 0} {cfg.VALUTA.SHORT}")
                 tracker.log(
                     command=("BALANCE", F.MAGENTA + S.DIM),
@@ -241,17 +242,17 @@ async def get_qr(message: Message):
         f.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
-            user = lpsql.search("users", "ID", message.from_user.id)
+            user = db.search("users", "ID", message.from_user.id)
             if user is not None:
                 await message.answer(txt.MAIN.CMD.QR_WARNING.format(
                     name=user["name"],
                     tag='@'+user["tag"] if user["tag"] else '–'
                 ))
-                qr = lpsql.search("qr", "userID", message.from_user.id)
+                qr = db.search("qr", "userID", message.from_user.id)
                 if qr is None or qr["fileID_main"] is None:
                     fileid = (await message.answer_photo(FSInputFile(cfg.PATHS.QR + str(message.from_user.id) + '.png'),
                                                          has_spoiler=True)).photo[-1].file_id
-                    lpsql.update("qr", "userID", message.from_user.id, "fileID_main", fileid)
+                    db.update("qr", "userID", message.from_user.id, "fileID_main", fileid)
                 else:
                     await message.answer_photo(qr["fileID_main"], has_spoiler=True)
                 tracker.log(
@@ -282,7 +283,7 @@ async def get_qr(message: Message):
 async def delete_acc(message: Message):
     try:
         try:
-            lpsql.delete_user(message.from_user.id)
+            db.delete_user(message.from_user.id)
             await message.answer("Account deleted.")
         except lpsql.errors.IDNotFound:
             await message.answer("Account doesn't exist.")

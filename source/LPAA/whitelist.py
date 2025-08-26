@@ -17,6 +17,7 @@ import source.LPAA._keyboards as main_keyboard
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3_main, firewall3_lpsb = firewall3.FireWall("MAIN"), firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/whitelist router")
 
 
@@ -110,7 +111,7 @@ async def whitelist_user(message: Message, state: FSMContext):
             if str(user) not in white_list:
                 await state.update_data(USER=user)
                 await state.set_state(WhitelistFSM.CONFIRM)
-                js = lpsql.search("users", "ID", user)
+                js = db.search("users", "ID", user)
                 if js is None:
                     js = {"name": "незарегистрированный пользователь", "class": "–", "tag": None}
                 await message.answer(txt.LPAA.WHITELIST.CONFIRM.format(
@@ -188,7 +189,7 @@ async def ban_choose(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         try:
             id_ = int(message.text)
-            if id_ in lpsql.searchall("users", "ID"):
+            if id_ in db.searchall("users", "ID"):
                 if firewall3_main.check(id_) == firewall3_main.BLACK_ANCHOR == firewall3_lpsb.check(id_):
                     await message.answer(txt.LPAA.BAN.ALREADY)
                     tracker.log(
@@ -197,7 +198,7 @@ async def ban_choose(message: Message, state: FSMContext):
                         from_user=f.collect_FU(message)
                     )
                 else:
-                    js_ = lpsql.search("users", "ID", id_)
+                    js_ = db.search("users", "ID", id_)
                     await message.answer(txt.LPAA.BAN.CONFIRM.format(
                         name=js_["name"],
                         group=js_["class"],
@@ -278,7 +279,7 @@ async def pardon_choose(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg, main_keyboard])
         try:
             id_ = int(message.text)
-            if id_ in lpsql.searchall("users", "ID"):
+            if id_ in db.searchall("users", "ID"):
                 if firewall3_main.check(id_) == firewall3_main.WHITE_ANCHOR == firewall3_lpsb.check(id_):
                     await message.answer(txt.LPAA.PARDON.ALREADY)
                     tracker.log(
@@ -287,7 +288,7 @@ async def pardon_choose(message: Message, state: FSMContext):
                         from_user=f.collect_FU(message)
                     )
                 else:
-                    js_ = lpsql.search("users", "ID", id_)
+                    js_ = db.search("users", "ID", id_)
                     await message.answer(txt.LPAA.PARDON.CONFIRM.format(
                         name=js_["name"],
                         group=js_["class"],

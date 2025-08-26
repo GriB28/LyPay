@@ -16,6 +16,7 @@ from source.LPSB._states import *
 
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/ad_admins router")
 
 
@@ -70,7 +71,7 @@ async def get_id(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
             return
-        search = lpsql.search("shopkeepers", "userID", id_)
+        search = db.search("shopkeepers", "userID", id_)
         if search:
             await state.update_data(ID=int(message.text))
             tracker.log(
@@ -167,7 +168,7 @@ async def approve(message: Message, state: FSMContext):
 async def get_id_to_approve(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
-        stores = lpsql.searchall("stores", "ID")
+        stores = db.searchall("stores", "ID")
         store_id = message.text.lower()
         if store_id not in stores:
             await message.answer(txt.LPSB.AD.ADMIN.APPROVE.BAD_ARG)
@@ -184,7 +185,7 @@ async def get_id_to_approve(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
         else:
-            store = lpsql.search("stores", "ID", store_id)
+            store = db.search("stores", "ID", store_id)
             await state.update_data(APPROVE_ID=store_id)
             await state.set_state(AdAdminFSM.APPROVE_CONFIRM)
             await message.answer(txt.LPSB.AD.ADMIN.APPROVE.CONFIRM.format(
@@ -209,7 +210,7 @@ async def approve_confirm(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
         store_id = (await state.get_data())["APPROVE_ID"]
-        shopkeepers = [user["userID"] for user in lpsql.search("shopkeepers", "storeID", store_id, True)]
+        shopkeepers = [user["userID"] for user in db.search("shopkeepers", "storeID", store_id, True)]
         for user in shopkeepers:
             await message.bot.send_message(
                 text=txt.LPSB.AD.ADMIN.APPROVE.APPROVED_MESSAGE,

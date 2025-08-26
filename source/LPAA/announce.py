@@ -17,6 +17,7 @@ from source.LPAA._states import *
 rtr = Router()
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3, firewall3_LPSB = firewall3.FireWall("LPAA"), firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/announce router")
 
 
@@ -105,7 +106,7 @@ async def sent(message: Message, state: FSMContext):
         counter = 0
         if message.text.strip() == '-':
             if data["BOT"] == "main":
-                for user in lpsql.searchall("users", "ID"):
+                for user in db.searchall("users", "ID"):
                     counter += 1
                     exelink.message(
                         text=announcement,

@@ -20,6 +20,7 @@ import source.LPAA._keyboards as main_keyboard
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPAA")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPAA/info router")
 
 
@@ -90,7 +91,7 @@ async def user_by_id(message: Message, state: FSMContext):
             input_ = int(message.text.strip())
             await message.answer("Запрос одобрен. Ожидайте ответа...")
             try:
-                user = lpsql.search("users", "ID", input_)
+                user = db.search("users", "ID", input_)
                 if user is None:
                     raise lpsql.errors.IDNotFound
                 await message.answer(txt.LPAA.INFO.USER.TABLET.format(
@@ -160,8 +161,8 @@ async def user_by_name(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
             out = 0
-            for user in lpsql.searchall("users", "ID"):
-                read = lpsql.search("users", "ID", user)
+            for user in db.searchall("users", "ID"):
+                read = db.search("users", "ID", user)
                 if input_ in read["name"].lower():
                     await message.answer(txt.LPAA.INFO.USER.TABLET.format(
                         id=user,
@@ -232,8 +233,8 @@ async def user_by_email(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
             out = 0
-            for user in lpsql.searchall("users", "ID"):
-                read = lpsql.search("users", "ID", user)
+            for user in db.searchall("users", "ID"):
+                read = db.search("users", "ID", user)
                 if input_ in read["email"].lower():
                     await message.answer(txt.LPAA.INFO.USER.TABLET.format(
                         id=user,
@@ -304,8 +305,8 @@ async def user_by_tag(message: Message, state: FSMContext):
                 from_user=f.collect_FU(message)
             )
             out = 0
-            for user in lpsql.searchall("users", "ID"):
-                read = lpsql.search("users", "ID", user)
+            for user in db.searchall("users", "ID"):
+                read = db.search("users", "ID", user)
                 if read["tag"] and input_ in read["tag"].lower():
                     await message.answer(txt.LPAA.INFO.USER.TABLET.format(
                         id=user,
@@ -382,11 +383,11 @@ async def transactions(message: Message, state: FSMContext):
         input_ = message.text.strip()
         ok = False
         try:
-            if not ok and int(input_) in lpsql.searchall("users", "ID"):
+            if not ok and int(input_) in db.searchall("users", "ID"):
                 ok = True
         except ValueError:
             pass
-        if not ok and input_ in lpsql.searchall("stores", "ID"):
+        if not ok and input_ in db.searchall("stores", "ID"):
             ok = True
 
         if not ok:
@@ -407,12 +408,12 @@ async def transactions(message: Message, state: FSMContext):
                     from_user=f.collect_FU(message)
                 )
                 c = 0
-                for tr in lpsql.get_table("history"):
+                for tr in db.get_table("history"):
                     if input_ != tr["id_out"] and input_ != tr["id_in"]:
                         continue
                     t = datetime.fromtimestamp(tr["unix"]).strftime('%d.%m.%Y %X.') + str(int(tr["unix"] * 100) % 100)
                     key = tr["id_out"] if tr["id_out"] != input_ else tr["id_in"]
-                    for value in lpsql.searchall("stores", "ID"):
+                    for value in db.searchall("stores", "ID"):
                         if key == f"s{value}":
                             if is_user:
                                 if tr["id_out"] == input_:
@@ -435,7 +436,7 @@ async def transactions(message: Message, state: FSMContext):
                                 await sleep(1/30)
                             c += 1
                             break
-                    for value in lpsql.searchall("users", "ID"):
+                    for value in db.searchall("users", "ID"):
                         if key == f"u{value}":
                             if is_user:
                                 if tr["id_out"] == input_:
@@ -530,7 +531,7 @@ async def store_by_id(message: Message, state: FSMContext):
                     status=("SEARCHING", F.GREEN + S.DIM),
                     from_user=f.collect_FU(message)
                 )
-                read = lpsql.search("stores", "ID", input_)
+                read = db.search("stores", "ID", input_)
                 if read is None:
                     raise lpsql.errors.IDNotFound
                 await message.answer(txt.LPAA.INFO.STORE.TABLET.format(
@@ -600,8 +601,8 @@ async def store_by_name(message: Message, state: FSMContext):
                 status=("SEARCHING", F.GREEN + S.DIM),
                 from_user=f.collect_FU(message)
             )
-            for store in lpsql.searchall("stores", "ID"):
-                js = lpsql.search("stores", "ID", store)
+            for store in db.searchall("stores", "ID"):
+                js = db.search("stores", "ID", store)
                 if input_ in js["name"].lower():
                     await message.answer(txt.LPAA.INFO.STORE.TABLET.format(
                         store=store,
@@ -672,8 +673,8 @@ async def store_by_desc(message: Message, state: FSMContext):
                 status=("SEARCHING", F.GREEN + S.DIM),
                 from_user=f.collect_FU(message)
             )
-            for store in lpsql.searchall("stores", "ID"):
-                js = lpsql.search("stores", "ID", store)
+            for store in db.searchall("stores", "ID"):
+                js = db.search("stores", "ID", store)
                 if input_ in js["description"].lower():
                     await message.answer(txt.LPAA.INFO.STORE.TABLET.format(
                         store=store,
@@ -744,8 +745,8 @@ async def store_by_host(message: Message, state: FSMContext):
                 status=("SEARCHING", F.GREEN + S.DIM),
                 from_user=f.collect_FU(message)
             )
-            for store in lpsql.searchall("stores", "ID"):
-                js = lpsql.search("stores", "ID", store)
+            for store in db.searchall("stores", "ID"):
+                js = db.search("stores", "ID", store)
                 if input_ == js["hostID"]:
                     await message.answer(txt.LPAA.INFO.STORE.TABLET.format(
                         store=store,
@@ -820,7 +821,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque[:-5]:
                     js = await j2.fromfile_async(cfg.PATHS.STORES_CHEQUES + cheque)
-                    user = lpsql.search("users", "ID", js["customer"])
+                    user = db.search("users", "ID", js["customer"])
                     items_ = js["items"]
                     multipliers_ = js["multipliers"]
                     await message.answer(txt.LPAA.INFO.CHEQUE.TABLET.format(
@@ -898,7 +899,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque.split('_')[1]:
                     js = await j2.fromfile_async(cfg.PATHS.STORES_CHEQUES + cheque)
-                    user = lpsql.search("users", "ID", js["customer"])
+                    user = db.search("users", "ID", js["customer"])
                     items_ = js["items"]
                     multipliers_ = js["multipliers"]
                     await message.answer(txt.LPAA.INFO.CHEQUE.TABLET.format(
@@ -977,7 +978,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque.split('_')[0]:
                     js = await j2.fromfile_async(cfg.PATHS.STORES_CHEQUES + cheque)
-                    user = lpsql.search("users", "ID", js["customer"])
+                    user = db.search("users", "ID", js["customer"])
                     items_ = js["items"]
                     multipliers_ = js["multipliers"]
                     await message.answer(txt.LPAA.INFO.CHEQUE.TABLET.format(

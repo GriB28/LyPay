@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, lpsql, exelink
+from scripts import f, firewall3, tracker, lpsql
 from scripts.j2 import fromfile as j_fromfile
 from data import txt, config as cfg
 
@@ -17,6 +17,7 @@ from source.AUC._states import *
 rtr = Router()
 firewall3 = firewall3.FireWall('LPSB')
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("AUC/transfer router")
 
 
@@ -55,9 +56,9 @@ async def transfer_get_store(message: Message, state: FSMContext):
         f.update_config(config, [txt, cfg])
         text = message.text.lower()
         try:
-            store = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+            store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             try:
-                if text not in lpsql.searchall("stores", "ID"):
+                if text not in db.searchall("stores", "ID"):
                     await message.answer(txt.AUC.TRANSFER.NOT_FOUND)
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
@@ -72,7 +73,7 @@ async def transfer_get_store(message: Message, state: FSMContext):
                         from_user=f.collect_FU(message)
                     )
                 else:
-                    host = lpsql.search("users", "ID", lpsql.search("stores", "ID", text)["hostID"])
+                    host = db.search("users", "ID", db.search("stores", "ID", text)["hostID"])
                     if host is None:
                         host = {"name": "незарегистрированный пользователь", "class": "–", "tag": None}
 
@@ -137,7 +138,7 @@ async def transfer_get_amount(message: Message, state: FSMContext):
             amount = int(message.text)
             if amount > 0:
                 data = await state.get_data()
-                if amount <= lpsql.balance_view(lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]):
+                if amount <= db.balance_view(db.search("shopkeepers", "userID", message.from_user.id)["storeID"]):
                     await state.update_data(INPUT=amount)
                     await message.answer(txt.AUC.TRANSFER.CONFIRM2.format(
                         store=data["STORE"],
@@ -182,12 +183,12 @@ async def transfer_confirm2(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg])
         data = await state.get_data()
-        id_ = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+        id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
 
-        lpsql.transfer(id_, data["STORE"], data["INPUT"])
+        db.transfer(id_, data["STORE"], data["INPUT"])
 
-        for userID in lpsql.searchall("shopkeepers", "userID"):
-            if lpsql.search("shopkeepers", "userID", userID)["storeID"] == data["STORE"]:
+        for userID in db.searchall("shopkeepers", "userID"):
+            if db.search("shopkeepers", "userID", userID)["storeID"] == data["STORE"]:
                 await message.bot.send_message(
                     text=txt.AUC.TRANSFER.UPDATE.format(
                         store=id_,

@@ -25,6 +25,7 @@ rtr.include_routers(
 )
 config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPSB")
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("LPSB/menu router")
 
 
@@ -39,17 +40,17 @@ async def menu(message: Message, state: FSMContext):
                     current not in MenuFSM.__states__ and \
                     current not in AccessFSM.__states__ and \
                     current not in AdFSM.__states__ and \
-                    message.from_user.id in lpsql.searchall("shopkeepers", "userID"):
+                    message.from_user.id in db.searchall("shopkeepers", "userID"):
                 await state.set_state(MenuFSM.MENU)
                 tracker.log(
                     command=("MENU", F.BLUE + S.BRIGHT),
                     from_user=f.collect_FU(message)
                 )
-                storeID = lpsql.search("shopkeepers", "userID", message.from_user.id)["storeID"]
+                storeID = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
                 m_id = (await message.answer(
                     txt.LPSB.CMD.MENU_TABLET.format(
                         id=storeID,
-                        balance=lpsql.balance_view(storeID)
+                        balance=db.balance_view(storeID)
                     ),
                     reply_markup=main_keyboard.menuCMD["main"]
                 )).message_id
@@ -86,12 +87,12 @@ async def menu(message: Message, state: FSMContext):
                 await state.clear()
 
                 try:
-                    storeID = lpsql.search("shopkeepers", "userID", message.from_user.id)
+                    storeID = db.search("shopkeepers", "userID", message.from_user.id)
                     if storeID is None:
                         return
                     storeID = storeID["storeID"]
                     while True:
-                        lpsql.delete("changing", message.from_user.id, storeID)
+                        db.delete("changing", message.from_user.id, storeID)
                 except lpsql.errors.EntryNotFound:
                     pass
 

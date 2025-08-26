@@ -1,7 +1,8 @@
 ﻿from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, ReplyKeyboardBuilder, KeyboardButton
-from scripts import lpsql as keyboard_lpsql_shortcut
+from scripts import lpsql
 from data.config import VALUTA
+keyboard_db_shortcut = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
 startCMDbuilder = InlineKeyboardBuilder([[
     InlineKeyboardButton(text="Официальный канал Ярмарки", url="https://t.me/fairL2SH")
@@ -48,7 +49,7 @@ promoCMD = promoCMDbuilder.as_markup()
 def update_keyboard(uid: int | None = None, cancel_mode: bool = False) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
     if uid is None:
         return ReplyKeyboardRemove()
-    user_db = keyboard_lpsql_shortcut.search("users", "ID", uid)
+    user_db = keyboard_db_shortcut.search("users", "ID", uid)
     if user_db is None:
         return ReplyKeyboardRemove()
 

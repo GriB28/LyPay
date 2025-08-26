@@ -11,6 +11,7 @@ from data import txt
 
 rtr = Router()
 firewall3 = firewall3.FireWall('MAIN', silent=False)
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("SRV/registration router")
 
 
@@ -24,9 +25,9 @@ async def test(message: Message):
                 from_user=f.collect_FU(message)
             )
 
-            if message.from_user.id not in lpsql.searchall("users", "ID"):
-                lpsql.insert("users",
-                             [
+            if message.from_user.id not in db.searchall("users", "ID"):
+                db.insert("users",
+                          [
                                  message.from_user.id,          # ID
                                  "запись создана на арттесте",  # name
                                  "тестировщик",                 # class

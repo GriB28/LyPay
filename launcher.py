@@ -15,6 +15,8 @@ from scripts import j2, firewall3, lpsql, exelink
 c_init(autoreset=True)
 just_fix_windows_console()
 
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+
 
 class Launcher:
     """
@@ -97,7 +99,7 @@ class Launcher:
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Checking the main database...", end=' ')
         try:
-            length = len(lpsql.searchall("users", "ID"))
+            length = len(db.searchall("users", "ID"))
             print(F.LIGHTGREEN_EX + f"{length} user{'s' if length > 1 else ''} found")
         except Exception as e:
             if "lypay_database.db" not in listdir(cwd() + "database"):
@@ -109,8 +111,8 @@ class Launcher:
             exit()
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Auction compatibility check...", end=' ')
-        if lpsql.searchall("stores", "ID").count("auction_transfer_route") == 0:
-            lpsql.insert("stores", [
+        if db.searchall("stores", "ID").count("auction_transfer_route") == 0:
+            db.insert("stores", [
                 "auction_transfer_route",       # ID
                 "Покупка лотов аукциона",       # name
                 0,                              # hostID
@@ -266,15 +268,6 @@ class Launcher:
         elif args[0] == '-global':
             total = 0
             print("WORK IS STILL IN PROGRESS")
-            '''for agent in [file for file in listdir(cfg.PATHS.STATISTICS) if file[-5:] == 'agent']:
-                with open(cfg.PATHS.STATISTICS + agent, encoding='utf8') as f:
-                    read_ = f.readlines()
-                print(F.CYAN + S.NORMAL + f"{read_[0]}", end='')
-                sum_ = sum([int(line.split(': ')[1].replace('\n', '')) for line in read_[1:]])
-                total += sum_
-                print(F.CYAN + S.NORMAL + f"- total: {sum_} {cfg.VALUTA.SHORT}")
-                print(F.CYAN + S.NORMAL + f"- average: {round(sum_ / (unix() - float(read_[1].split(': ')[0])), 3)} {cfg.VALUTA.SHORT}")
-            print(F.YELLOW + S.BRIGHT + "Total amount through agents:", total, cfg.VALUTA.SHORT)'''
 
             total_stores = dict()
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
@@ -351,8 +344,8 @@ class Launcher:
             found = False
 
             if mode == "-user":
-                for id_ in lpsql.searchall("users", "ID"):
-                    js_ = lpsql.search("users", "ID", id_)
+                for id_ in db.searchall("users", "ID"):
+                    js_ = db.search("users", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == str(id_):
                         found = True
                         print(f"User #{id_}:")
@@ -370,8 +363,8 @@ class Launcher:
                     print("Nothing found!\n")
 
             elif mode == "-store":
-                for id_ in lpsql.searchall("stores", "ID"):
-                    js_ = lpsql.search("stores", "ID", id_)
+                for id_ in db.searchall("stores", "ID"):
+                    js_ = db.search("stores", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == id_:
                         found = True
                         print(f"Store #{id_}:")
@@ -410,8 +403,8 @@ class Launcher:
                 query = mode + ' ' + query
                 query = query.strip()
                 print(query)
-                for id_ in lpsql.searchall("users", "ID"):
-                    js_ = lpsql.search("users", "ID", id_)
+                for id_ in db.searchall("users", "ID"):
+                    js_ = db.search("users", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == str(id_):
                         found = True
                         print(f"User #{id_}:")
@@ -425,8 +418,8 @@ class Launcher:
                             else:
                                 print(f"- {key}: " + F.GREEN + S.BRIGHT + f"{value}", sep='')
                         print()
-                for id_ in lpsql.searchall("stores", "ID"):
-                    js_ = lpsql.search("stores", "ID", id_)
+                for id_ in db.searchall("stores", "ID"):
+                    js_ = db.search("stores", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == id_:
                         found = True
                         print(f"Store #{id_}:")
@@ -498,7 +491,8 @@ class Launcher:
             return False
         else:
             launch_setup = """
-@ECHO ON
+@ECHO OFF
+echo LyPay launch sequence is in progress...
 chcp 65001 > NUL
 cd /d "%~dp0"
 """
@@ -714,7 +708,7 @@ exit
     def sql(self, arg: str):
         try:
             print(arg)
-            query = lpsql.manual(arg)
+            query = db.manual(arg)
             if len(query) > 0:
                 query = list(map(lambda item: list(map(str, item)), query))
                 max_seps = [0] * len(query[0])
@@ -741,14 +735,14 @@ exit
             if args[0] == '-store':
                 try:
                     hostID = args[1]
-                    last_index = len([store for store in lpsql.searchall("stores", "ID") if store[0] == 'i'])
+                    last_index = len([store for store in db.searchall("stores", "ID") if store[0] == 'i'])
                     try:
                         storeID = args[2]
                     except IndexError:
                         storeID = f"i{str(last_index+1).zfill(2)}"
 
                     self.firewalls["lpsb"].add_white(hostID, "added via extra command")
-                    lpsql.insert(
+                    db.insert(
                         "stores",
                         [
                             storeID,                                                    # ID
@@ -762,14 +756,14 @@ exit
                             None                                                        # placeID
                         ]
                     )
-                    lpsql.insert(
+                    db.insert(
                         "shopkeepers",
                         [
                             hostID,  # userID
                             storeID  # storeID
                         ]
                     )
-                    lpsql.insert(
+                    db.insert(
                         "logotypes",
                         [
                             storeID,    # storeID
@@ -788,8 +782,8 @@ exit
                     group = args[4]
                     email = args[5]
 
-                    lpsql.insert("users",
-                                 [
+                    db.insert("users",
+                              [
                                      userID,    # ID
                                      name,      # name
                                      group,     # class
@@ -800,8 +794,8 @@ exit
                                  ])
                     if not exists(cfg.PATHS.QR + f"{userID}.png"):
                         exelink.add(f"qr {userID}", 0)
-                        lpsql.insert("qr",
-                                     [
+                        db.insert("qr",
+                                  [
                                          userID,    # userID
                                          None,      # fileID_main
                                          None,      # fileID_lpsb
@@ -856,13 +850,13 @@ exit
 launcher = Launcher()
 auto_restart = launcher.settings_array["auto_restart_cmd"]
 if auto_restart is not None:
-    cmd_not_lowered = auto_restart.strip().split()
-    cmd = list(map(lambda s: s.lower(), cmd_not_lowered))
+    raw_cmd = auto_restart.strip().split()
+    cmd = list(map(lambda s: s.lower(), raw_cmd))
     print()
     print(F.LIGHTBLUE_EX + "Autorestart event", "has been triggered with following argument:")
-    print(F.YELLOW + ">>> " + ' '.join(cmd_not_lowered))
+    print(F.YELLOW + ">>> " + ' '.join(raw_cmd))
 else:
-    cmd_not_lowered = ''
+    raw_cmd = ''
     cmd = list()
 
 while True:
@@ -974,8 +968,8 @@ while True:
         launcher.error_handle("un_exp_0.argument", "KeyError", "Unknown command, try: " + F.YELLOW + "help")
 
     print()
-    cmd_not_lowered = input(S.NORMAL + F.GREEN + ">>> " + F.LIGHTGREEN_EX).strip().split()
-    cmd = list(map(lambda s: s.lower(), cmd_not_lowered))
+    raw_cmd = input(S.NORMAL + F.GREEN + ">>> " + F.LIGHTGREEN_EX).strip().split()
+    cmd = list(map(lambda s: s.lower(), raw_cmd))
     print(F.RESET + S.RESET_ALL, end='')
 
 launcher.close()

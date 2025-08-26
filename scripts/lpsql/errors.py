@@ -24,3 +24,7 @@ class TagNotFound(Exception):
 
 class EntryNotFound(Exception):
     pass
+
+
+class BaseNotFound(Exception):
+    pass

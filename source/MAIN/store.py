@@ -22,6 +22,7 @@ from source.MAIN._states import *
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall('MAIN')
+db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/store router")
 
 
@@ -30,10 +31,9 @@ async def store(message: Message, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["main_can_deposit"]:
-            if message.from_user.id in lpsql.searchall("users", "ID"):
+            if message.from_user.id in db.searchall("users", "ID"):
                 firewall_status = firewall3.check(message.from_user.id)
                 if firewall_status == firewall3.WHITE_ANCHOR:
-                    # if len(message.text.split()) == 1:
                     tracker.log(
                         command=("STORE", F.MAGENTA),
                         status=("OK", F.GREEN),
@@ -42,67 +42,6 @@ async def store(message: Message, state: FSMContext):
                     await message.answer(txt.MAIN.STORE.ID_CHOOSE,
                                          reply_markup=main_keyboard.update_keyboard(message.from_user.id, True))
                     await state.set_state(StoreFSM.ID)
-                    '''
-                    else:
-                        id_ = message.text.split()[1]
-    
-                        current = lpsql.search("stores", "ID", id_)
-    
-                        if current is None:
-                            await state.set_state(StoreFSM.ID)
-                            await message.answer(txt.MAIN.STORE.ID_WRONG)
-                            tracker.log(
-                                command=("STORE", F.MAGENTA),
-                                status=("FAIL", F.RED),
-                                from_user=f.collect_FU(message)
-                            )
-                        else:
-                            if not current["logo"]:
-                                await message.answer(txt.MAIN.STORE.ID_OK.format(
-                                    name=current["name"],
-                                    description=current["description"]
-                                ))
-                            else:
-                                logo = lpsql.search("logotypes", "storeID", id_)
-                                if logo is None or logo["fileID_main"] is None:
-                                    fileid = (await message.answer_photo(FSInputFile(cfg.PATHS.STORES_LOGOS + f"{id_}.jpg"),
-                                                                         caption=txt.MAIN.STORE.ID_OK.format(
-                                                                             name=current["name"],
-                                                                             description=current["description"]
-                                                                         ))).photo[-1].file_id
-                                    lpsql.update("logotypes", "storeID", id_, "fileID_main", fileid)
-                                else:
-                                    await message.answer_photo(logo["fileID_main"],
-                                                               caption=txt.MAIN.STORE.ID_OK.format(
-                                                                   name=current["name"],
-                                                                   description=current["description"]
-                                                               ))
-                            await state.update_data(ID=id_)
-                            await state.update_data(ITEM=list())
-                            await state.update_data(MULTIPLIER=list())
-                            await state.set_state(StoreFSM.ITEM)
-                            keyboard, real_items, count = await proceed_store_keyboard(message.text.split()[1])
-                            await state.update_data(REAL=real_items)
-                            m_id = (await message.answer(
-                                txt.MAIN.STORE.ITEMS.format(
-                                    items_empty='' if count > 0 else 'в данный момент здесь ничего нет',
-                                    flag='' if len(lpsql.search("changing", "storeID", id_, True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
-                                ),
-                                reply_markup=keyboard.as_markup()
-                            )).message_id
-                            exelink.sublist(
-                                mode='add',
-                                name='ccc/main',
-                                key=message.chat.id,
-                                data=m_id,
-                                userID=message.from_user.id
-                            )
-                            tracker.log(
-                                command=("STORE", F.MAGENTA),
-                                status=("QUICK", F.GREEN),
-                                from_user=f.collect_FU(message)
-                            )
-                    '''
                 elif firewall_status == firewall3.BLACK_ANCHOR:
                     tracker.black(f.collect_FU(message))
                     await message.answer(txt.MAIN.CMD.IN_BLACKLIST)
@@ -143,7 +82,7 @@ async def choose_store(message: Message, state: FSMContext):
             return
         text = message.text.lower().replace('а', 'a').replace('с', 'c').replace('е', 'e')
 
-        current = lpsql.search("stores", "ID", text)
+        current = db.search("stores", "ID", text)
 
         if current is None:
             await message.answer(txt.MAIN.STORE.ID_WRONG)
@@ -159,7 +98,7 @@ async def choose_store(message: Message, state: FSMContext):
                     description=current["description"]
                 ))
             else:
-                logo = lpsql.search("logotypes", "storeID", text)
+                logo = db.search("logotypes", "storeID", text)
                 if logo is None or logo["fileID_main"] is None:
                     fileid = (await message.answer_photo(FSInputFile(cfg.PATHS.STORES_LOGOS + f"{text}.jpg"),
                                                          caption=txt.MAIN.STORE.ID_OK.format(
@@ -167,10 +106,10 @@ async def choose_store(message: Message, state: FSMContext):
                                                              description=current["description"]
                                                          ))).photo[-1].file_id
                     try:
-                        lpsql.update("logotypes", "storeID", text, "fileID_main", fileid)
+                        db.update("logotypes", "storeID", text, "fileID_main", fileid)
                     except lpsql.errors.EntryNotFound:
-                        lpsql.insert("logotypes",
-                                     [
+                        db.insert("logotypes",
+                                  [
                                          text,      # storeID
                                          fileid,    # fileID_main
                                          None       # fileID_lpsb
@@ -190,7 +129,7 @@ async def choose_store(message: Message, state: FSMContext):
             m_id = (await message.answer(
                 txt.MAIN.STORE.ITEMS.format(
                     items_empty='' if count > 0 else 'в данный момент здесь ничего нет',
-                    flag='' if len(lpsql.search("changing", "storeID", text, True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
+                    flag='' if len(db.search("changing", "storeID", text, True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
                 ),
                 reply_markup=keyboard.as_markup()
             )).message_id
@@ -214,7 +153,7 @@ async def choose_store(message: Message, state: FSMContext):
         )
 
 
-async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, list[dict[str, any]], int]:
+async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, list[dict[str, ...]], int]:
     """
     :param store_id: ID магазина
     :return: tuple(клавиатура с товарами, список распакованных товров, количество товаров в клавиатуре)
@@ -240,7 +179,6 @@ async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, 
 async def store_callback(callback: CallbackQuery, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
-        # try:
         data = await state.get_data()
         item_ = data["REAL"][i.to_int(callback.data.split('_')[2]) - 1]
         await state.set_state(StoreFSM.MULTIPLIER)
@@ -257,34 +195,6 @@ async def store_callback(callback: CallbackQuery, state: FSMContext):
             status=("ITEM_CHOOSED", F.GREEN + S.NORMAL),
             from_user=f.collect_FU(callback)
         )
-        '''
-        except FileNotFoundError:
-            keyboard, real_items, count = await proceed_store_keyboard(callback.data.split('_')[1])
-            await state.update_data(REAL=real_items)
-            await callback.message.edit_text(
-                txt.MAIN.STORE.ITEMS.format(
-                    items_empty='' if count > 0 else 'в данный момент здесь ничего нет',
-                    flag='' if len(lpsql.search("changing", "storeID", (await state.get_data())["ID"],
-                                                True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
-                ),
-                reply_markup=keyboard.as_markup()
-            )
-            if count == 0:
-                await callback.message.answer(txt.MAIN.STORE.NO_ITEMS_FATAL,
-                                              reply_markup=main_keyboard.update_keyboard(callback.from_user.id))
-                await state.clear()
-                tracker.log(
-                    command=("STORE", F.MAGENTA),
-                    status=("NO_ITEMS_FATAL", F.RED + S.BRIGHT),
-                    from_user=f.collect_FU(callback)
-                )
-            else:
-                tracker.log(
-                    command=("STORE", F.MAGENTA),
-                    status=("ITEM_REDIRECT", F.YELLOW + S.BRIGHT),
-                    from_user=f.collect_FU(callback)
-                )
-        '''
     except Exception as e:
         tracker.error(
             e=e,
@@ -406,8 +316,8 @@ async def store_continue(callback: CallbackQuery, state: FSMContext):
         m_id = (await callback.message.answer(
             txt.MAIN.STORE.ITEMS.format(
                 items_empty='' if count > 0 else 'в данный момент здесь ничего нет',
-                flag='' if len(lpsql.search("changing", "storeID", (await state.get_data())["ID"],
-                                            True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
+                flag='' if len(db.search("changing", "storeID", (await state.get_data())["ID"],
+                                         True)) == 0 else txt.MAIN.STORE.WARNING_ON_CHANGE
             ),
             reply_markup=keyboard.as_markup()
         )).message_id
@@ -445,7 +355,7 @@ async def store_purchase(callback: CallbackQuery, state: FSMContext):
     try:
         f.update_config(config, [txt, cfg, main_keyboard])
         _data_ = await state.get_data()
-        user_ = lpsql.search("users", "ID", callback.from_user.id)
+        user_ = db.search("users", "ID", callback.from_user.id)
         id_ = _data_["ID"]
         items_ = _data_["ITEM"]
         multipliers_ = _data_["MULTIPLIER"]
@@ -458,7 +368,7 @@ async def store_purchase(callback: CallbackQuery, state: FSMContext):
             generated_strings.append(f"{f.de_anchor(items_[k]["text"])} × {multipliers_[k]} | {total_k} {cfg.VALUTA.SHORT}")
 
         try:
-            lpsql.transfer(callback.from_user.id, id_, total_all)
+            db.transfer(callback.from_user.id, id_, total_all)
             tracker.log(
                 command=("STORE", F.MAGENTA),
                 status=("BUY", F.YELLOW),
