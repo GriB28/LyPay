@@ -5,11 +5,11 @@
     "update_names": false, 
     "launch_timeout": 0.2, 
     "auction": false, 
-    "main_can_deposit": false, 
+    "main_can_deposit": true, 
     "main_can_use_promo": true, 
     "main_can_register_via_linking": false, 
-    "lpsb_can_register": false, 
+    "lpsb_can_register": true, 
     "lpsb_can_send_ad": false, 
     "show_unknown_errors": true, 
-    "last_launch": 1756231050
+    "last_launch": 1756325301
 }

@@ -835,7 +835,7 @@ CPU по ядрам:
 Подтверждение покупки лота:
 Название: {name}
 Цена: {price} %s
-Аук-номер: {number}
+АукID: {number}
 """ % VALUTA.SHORT
         CONFIRMED = """
 

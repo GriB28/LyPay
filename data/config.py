@@ -155,7 +155,7 @@ AD_GROUP = -4716284444
 
 VERSION = "v2.2"
 NAME = "repack patch 2"
-BUILD = 77
+BUILD = 78
 
 CONTACT_TAG = "@IGriB28I"
 

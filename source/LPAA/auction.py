@@ -106,17 +106,19 @@ async def set_buyer(message: Message, state: FSMContext):
             if auc_id not in db.searchall("stores", "auctionID"):
                 raise ValueError
 
-            await state.update_data(AUC_ID=auc_id)
             saved = await state.get_data()
-            m_id = (await message.answer(txt.LPAA.AUCTION.CONFIRM.format(
-                lotID=saved["LOT"],
-                name=saved["NAME"],
-                price=saved["PRICE"],
-                number=message.text
-            ), reply_markup=InlineKeyboardBuilder([[InlineKeyboardButton(
-                text="ОК",
-                callback_data=f"lot+{saved["LOT"]}+{saved["NAME"]}+{saved["PRICE"]}+{message.text}"
-            )]]).as_markup())).message_id
+            m_id = (await message.answer(
+                txt.LPAA.AUCTION.CONFIRM.format(
+                    lotID=saved["LOT"],
+                    name=saved["NAME"],
+                    price=saved["PRICE"],
+                    number=auc_id
+                ),
+                reply_markup=InlineKeyboardBuilder([[InlineKeyboardButton(
+                    text="ОК",
+                    callback_data=f"lot+{saved["LOT"]}"
+                )]]).as_markup()
+            )).message_id
             exelink.sublist(
                 mode='add',
                 name='ccc/lpaa',
@@ -124,6 +126,13 @@ async def set_buyer(message: Message, state: FSMContext):
                 data=m_id,
                 userID=message.from_user.id
             )
+            db.insert("auction", [
+                saved["LOT"],       # lotID
+                saved["NAME"],      # name
+                saved["PRICE"],     # price
+                auc_id,             # auctionID
+                0                   # confirmed
+            ])
             await state.clear()
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
@@ -149,23 +158,21 @@ async def confirm_buying(callback: CallbackQuery):
     try:
         f.update_config(config, [txt])
         await callback.answer()
-        saved = dict(zip([None, 'LOT', 'NAME', 'PRICE', 'AUC_ID'], callback.data.split('+')))
-        storeID = db.search("stores", "auctionID", saved["AUC_ID"])["ID"]
+        lotID = int(callback.data[4:])
+        record = db.search("auction", "lotID", lotID, True)[-1]
+
+        storeID = db.search("stores", "auctionID", record["auctionID"])["ID"]
         try:
-            db.transfer(storeID, "auction_transfer_route", int(saved["PRICE"]))
-            db.insert("auction", [
-                int(saved["LOT"]),      # lotID
-                saved["NAME"],          # name
-                int(saved["PRICE"]),    # price
-                int(saved["AUC_ID"])    # auctionID
-            ])
+            db.transfer(storeID, "auction_transfer_route", record["price"])
+            db.update("auction", "lotID", lotID, "confirmed", 1)
+            # НУЖНА ПРОВЕРКА НА ЕДИНИЧНОСТЬ, чтобы исключить редактирование неверной записи
             for userID in db.searchall("shopkeepers", "userID"):
                 if db.search("shopkeepers", "userID", userID)["storeID"] == storeID:
                     exelink.message(
                         text=txt.LPAA.AUCTION.MESSAGE.format(
-                            lot=saved["LOT"],
-                            name=saved["NAME"],
-                            price=saved["PRICE"]
+                            lot=lotID,
+                            name=record["name"],
+                            price=record["price"]
                         ),
                         bot="LPSB",
                         participantID=userID,
@@ -185,7 +192,7 @@ async def confirm_buying(callback: CallbackQuery):
             )
         except lpsql.errors.NotEnoughBalance:
             await callback.message.answer(txt.LPAA.AUCTION.NOT_ENOUGH_MONEY.format(
-                lotID=saved["LOT"],
+                lotID=lotID,
                 balance=db.balance_view(storeID)
             ))
             tracker.log(

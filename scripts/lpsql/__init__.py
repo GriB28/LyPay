@@ -4,14 +4,14 @@ import scripts.lpsql.errors
 from scripts.unix import unix
 from data.config import PATHS
 
-# v1.2
+# v1.2a
 
 
 class Tables:
     MAIN = ['users', 'stores', 'qr', 'shopkeepers', 'logotypes', 'history', 'changing', 'corporation', 'auction',
             'arttest_test1', 'arttest_test4', 'users_reformated']
 
-    SUBLISTS = ['ads', 'ad_approving', 'arttest', 'hi_frog', 'promo', 'store_form_link', 'ccc/lpaa', 'ccc/lpsb', 'ccc/main']
+    SUBLISTS = ['ads', 'ad_approving', 'arttest', 'auction_lot_control', 'ccc', 'hi_frog', 'promo', 'store_form_link']
 
 
 class DataBase:
@@ -33,7 +33,7 @@ class DataBase:
         except FileNotFoundError:
             raise errors.BaseNotFound
 
-    def search(self, table: str, column: str, mean: str | int, quantity: bool = False):
+    def search(self, table: str, column: str, mean: str | int, quantity: bool = False) -> None | dict[str, ...] | list[dict[str, ...]]:
         """
         [UNIVERSAL]
         Функция поиска.
@@ -61,19 +61,19 @@ class DataBase:
                 raise errors.TableNotFound
 
 
-    def insert(self, table: str, list: list):
+    def insert(self, table: str, values: list[...]):
         """
         [UNIVERSAL]
         Функция вставки данных в таблицу. Важно, чтобы количество данных совпадало с количеством колонок в таблице.
 
         Возможные ошибки: TableNotFound, встроенная ошибка sqlite3
         :param table: имя таблицы
-        :param list: список данных, перечисленных в порядке колонок таблицы
+        :param values: список данных, перечисленных в порядке колонок таблицы
         """
         with sq.connect(self.path) as con:
             cur = con.cursor()
             if table in self.tables:
-                cur.execute("insert into " + table + " VALUES (%s)" % ','.join('?' * len(list)), list)
+                cur.execute("insert into " + table + " VALUES (%s)" % ','.join('?' * len(values)), values)
             else:
                 raise errors.TableNotFound
 
@@ -119,7 +119,7 @@ class DataBase:
                 raise errors.IDNotFound
 
 
-    def balance_view(self, id: int | str):
+    def balance_view(self, id: int | str) -> int:
         """
         [MAIN DB]
         Функция просмотра баланса. Автоматически определяет тип объекта (пользователь/магазин) по типу id.
@@ -207,7 +207,7 @@ class DataBase:
                 raise errors.SubzeroInput
 
 
-    def searchall(self, table: str, column: str):
+    def searchall(self, table: str, column: str) -> list[...]:
         """
         [UNIVERSAL]
         Функция поиска всех значений определенной колонки определенной таблицы.
@@ -228,7 +228,7 @@ class DataBase:
                 raise errors.TableNotFound
 
 
-    def get_table(self, table: str):
+    def get_table(self, table: str) -> list[dict[str, ...]]:
         """
         [UNIVERSAL]
         Функция, возвращающая всю таблицу.

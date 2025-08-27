@@ -15,8 +15,6 @@ from scripts import j2, firewall3, lpsql, exelink
 c_init(autoreset=True)
 just_fix_windows_console()
 
-db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
-
 
 class Launcher:
     """
@@ -84,6 +82,7 @@ class Launcher:
                 userID=-1
             )
         self.last_error, self.last_success = None, None
+        self.db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Filling config.PATHS...", end=' ')
         created_dirs = 0
@@ -99,7 +98,7 @@ class Launcher:
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Checking the main database...", end=' ')
         try:
-            length = len(db.searchall("users", "ID"))
+            length = len(self.db.searchall("users", "ID"))
             print(F.LIGHTGREEN_EX + f"{length} user{'s' if length > 1 else ''} found")
         except Exception as e:
             if "lypay_database.db" not in listdir(cwd() + "database"):
@@ -111,8 +110,8 @@ class Launcher:
             exit()
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Auction compatibility check...", end=' ')
-        if db.searchall("stores", "ID").count("auction_transfer_route") == 0:
-            db.insert("stores", [
+        if self.db.searchall("stores", "ID").count("auction_transfer_route") == 0:
+            self.db.insert("stores", [
                 "auction_transfer_route",       # ID
                 "Покупка лотов аукциона",       # name
                 0,                              # hostID
@@ -344,8 +343,8 @@ class Launcher:
             found = False
 
             if mode == "-user":
-                for id_ in db.searchall("users", "ID"):
-                    js_ = db.search("users", "ID", id_)
+                for id_ in self.db.searchall("users", "ID"):
+                    js_ = self.db.search("users", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == str(id_):
                         found = True
                         print(f"User #{id_}:")
@@ -363,8 +362,8 @@ class Launcher:
                     print("Nothing found!\n")
 
             elif mode == "-store":
-                for id_ in db.searchall("stores", "ID"):
-                    js_ = db.search("stores", "ID", id_)
+                for id_ in self.db.searchall("stores", "ID"):
+                    js_ = self.db.search("stores", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == id_:
                         found = True
                         print(f"Store #{id_}:")
@@ -403,8 +402,8 @@ class Launcher:
                 query = mode + ' ' + query
                 query = query.strip()
                 print(query)
-                for id_ in db.searchall("users", "ID"):
-                    js_ = db.search("users", "ID", id_)
+                for id_ in self.db.searchall("users", "ID"):
+                    js_ = self.db.search("users", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == str(id_):
                         found = True
                         print(f"User #{id_}:")
@@ -418,8 +417,8 @@ class Launcher:
                             else:
                                 print(f"- {key}: " + F.GREEN + S.BRIGHT + f"{value}", sep='')
                         print()
-                for id_ in db.searchall("stores", "ID"):
-                    js_ = db.search("stores", "ID", id_)
+                for id_ in self.db.searchall("stores", "ID"):
+                    js_ = self.db.search("stores", "ID", id_)
                     if sum([query in str(v).lower() for v in js_.values()]) or query == id_:
                         found = True
                         print(f"Store #{id_}:")
@@ -707,8 +706,7 @@ exit
 
     def sql(self, arg: str):
         try:
-            print(arg)
-            query = db.manual(arg)
+            query = self.db.manual(arg)
             if len(query) > 0:
                 query = list(map(lambda item: list(map(str, item)), query))
                 max_seps = [0] * len(query[0])
@@ -735,35 +733,35 @@ exit
             if args[0] == '-store':
                 try:
                     hostID = args[1]
-                    last_index = len([store for store in db.searchall("stores", "ID") if store[0] == 'i'])
+                    last_index = len([store for store in self.db.searchall("stores", "ID") if store[0] == 'i'])
                     try:
                         storeID = args[2]
                     except IndexError:
                         storeID = f"i{str(last_index+1).zfill(2)}"
 
                     self.firewalls["lpsb"].add_white(hostID, "added via extra command")
-                    db.insert(
+                    self.db.insert(
                         "stores",
                         [
-                            storeID,                                                    # ID
-                            storeID,                                                    # name
-                            hostID,                                                     # hostID
-                            f"generated by Launcher Extra at {round(unix(), 2)}",       # description
-                            False,                                                      # logo
-                            0,                                                          # balance
-                            None,                                                       # hostEmail
-                            None,                                                       # auctionID
-                            None                                                        # placeID
+                            storeID,                                                # ID
+                            storeID,                                                # name
+                            hostID,                                                 # hostID
+                            f"generated by Launcher Extra at {round(unix(), 2)}",   # description
+                            False,                                                  # logo
+                            0,                                                      # balance
+                            None,                                                   # hostEmail
+                            None,                                                   # auctionID
+                            None                                                    # placeID
                         ]
                     )
-                    db.insert(
+                    self.db.insert(
                         "shopkeepers",
                         [
-                            hostID,  # userID
-                            storeID  # storeID
+                            hostID, # userID
+                            storeID # storeID
                         ]
                     )
-                    db.insert(
+                    self.db.insert(
                         "logotypes",
                         [
                             storeID,    # storeID
@@ -776,15 +774,15 @@ exit
                     self.error_handle("extra.argument", "ArgumentError", f"Can't parse the following arguments: {args[1:]}")
             elif args[0] == '-user':
                 try:
-                    userID = args[1]
+                    uid = args[1]
                     tag = args[2]
                     name = args[3].replace('_', ' ')
                     group = args[4]
                     email = args[5]
 
-                    db.insert("users",
+                    self.db.insert("users",
                               [
-                                     userID,    # ID
+                                     uid,    # ID
                                      name,      # name
                                      group,     # class
                                      email,     # email
@@ -792,14 +790,14 @@ exit
                                      0,         # balance
                                      1          # owner
                                  ])
-                    if not exists(cfg.PATHS.QR + f"{userID}.png"):
-                        exelink.add(f"qr {userID}", 0)
-                        db.insert("qr",
+                    if not exists(cfg.PATHS.QR + f"{uid}.png"):
+                        exelink.add(f"qr {uid}", 0)
+                        self.db.insert("qr",
                                   [
-                                         userID,    # userID
-                                         None,      # fileID_main
-                                         None,      # fileID_lpsb
-                                         None       # fileID_lpaa
+                                         uid,   # userID
+                                         None,  # fileID_main
+                                         None,  # fileID_lpsb
+                                         None   # fileID_lpaa
                                      ])
 
                     self.success_handle("extra.user", "Successfully added a user")
