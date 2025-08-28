@@ -2,7 +2,6 @@ from asyncio import run as a_run
 
 from os import listdir, remove, mkdir, getenv
 from os.path import exists
-from dotenv import load_dotenv
 from smtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -12,6 +11,9 @@ from colorama import Fore as F, Style as S, init as color_init, just_fix_windows
 from pyfiglet import print_figlet
 from segno import make_qr
 from time import sleep
+
+from dotenv import load_dotenv
+from sys import argv
 
 from scripts import j2, exelink
 from data import config as cfg, txt
@@ -407,10 +409,14 @@ update_fixed()
 
 async def main():
     num = 1
-    while j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["launch"]:
+    while True:
+        settings = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
+        if not (settings["launch"] and argv[1] == settings["launch_stamp"]):
+            break
+
         update_fixed()
         while j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["launch"] and len(listdir(cfg.PATHS.EXE)) == len(fixed_files):
-            sleep(.015)
+            sleep(.05)
 
         print(F.GREEN + S.NORMAL + "\n\nLoop run №", num, sep='')
         num += 1

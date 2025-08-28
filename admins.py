@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 
 from os import getenv
 from dotenv import load_dotenv
+from sys import argv
 
 from asyncio import run, sleep
 from colorama import Fore as F, Style as S, init as col_init, just_fix_windows_console
@@ -102,7 +103,7 @@ async def ccc_on_startup():
 
 async def main():
     settings = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
-    if settings["launch"]:
+    if settings["launch"] and argv[1] == settings["launch_stamp"]:
         try:
             await bot.delete_webhook(drop_pending_updates=True)
             del_web = F.LIGHTBLACK_EX + S.BRIGHT + "- skipping webhooks... " + S.RESET_ALL + F.LIGHTGREEN_EX + "[OK]"

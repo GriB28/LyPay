@@ -1,10 +1,10 @@
 import sqlite3
-from os import getcwd as cwd, mkdir, listdir, startfile, getenv
+from os import getcwd as cwd, mkdir, listdir, system, getenv
 from psutil import process_iter, AccessDenied as psutil_AccessDenied
 from os.path import exists
 from dotenv import load_dotenv
 from webbrowser import open as w_open
-from time import time as unix, sleep
+from time import time as unix
 from datetime import datetime
 from colorama import Fore as F, Style as S, init as c_init, just_fix_windows_console
 
@@ -173,10 +173,12 @@ class Launcher:
             "lpsb": firewall3.FireWall('LPSB', silent=True)
         }
         self.update_settings("launch", True)
+        self.update_settings("launch_stamp", f"lypay_launch_stamp_{unix()}")
 
     def close(self):
         self.update_settings("last_launch", int(unix()))
         self.update_settings("launch", False)
+        self.update_settings("launch_stamp", None)
 
     def update_settings(self, key: str, value: ...) -> int:
         '''
@@ -489,45 +491,25 @@ class Launcher:
             # todo: help page
             return False
         else:
-            launch_setup = """
-@ECHO OFF
-echo LyPay launch sequence is in progress...
-chcp 65001 > NUL
-cd /d "%~dp0"
-"""
-            if args[0] == 'main' or args[0] == 'bot':
-                launch_setup += f'start "LyPay: main" cmd /c python main.py lypay_{cfg.VERSION}_launch_stamp'
+            setup = ""
+            if args[0] in ('main', 'bot', 'every', 'everything', 'all'):
+                setup += f'-core main.py main {self.settings_array['launch_stamp']} '
 
-            elif args[0] == 'executor' or args[0] == 'exe':
-                launch_setup += f'start "LyPay: exe" cmd /c python executor.py lypay_{cfg.VERSION}_launch_stamp'
+            if args[0] in ('executor', 'exe', 'every', 'everything', 'all'):
+                setup += f'-core executor.py exe {self.settings_array['launch_stamp']} '
 
-            elif args[0] == 'stores' or args[0] == 'store' or args[0] == 'lpsb':
-                launch_setup += f'start "LyPay: stores" cmd /c python stores.py lypay_{cfg.VERSION}_launch_stamp'
+            if args[0] in ('admins', 'admin', 'lpaa', 'every', 'everything', 'all'):
+                setup += f'-core admins.py admins {self.settings_array['launch_stamp']} '
 
-            elif args[0] == 'admins' or args[0] == 'admin' or args[0] == 'lpaa':
-                launch_setup += f'start "LyPay: admins" cmd /c python admins.py lypay_{cfg.VERSION}_launch_stamp'
+            if args[0] in ('stores', 'store', 'lpsb', 'every', 'everything', 'all'):
+                setup += f'-core stores.py stores {self.settings_array['launch_stamp']} '
 
-            elif args[0] == 'every' or args[0] == 'everything' or args[0] == 'all':
-                launch_setup += f"""
-start "LyPay: main" cmd /c python main.py lypay_{cfg.VERSION}_launch_stamp
-start "LyPay: exe" cmd /c python executor.py lypay_{cfg.VERSION}_launch_stamp
-start "LyPay: admins" cmd /c python admins.py lypay_{cfg.VERSION}_launch_stamp
-start "LyPay: stores" cmd /c python stores.py lypay_{cfg.VERSION}_launch_stamp
-"""
-
-            else:
+            if len(setup) == 0:
                 self.error_handle("start.argument", "ArgumentError",
-                                  f"There is no argument '{args[1]}' associated with 'open'!")
+                                  f"There is no argument '{args[0]}' associated with 'open'!")
                 return False
 
-            launch_setup += """
-del /s /q %0 > NUL
-exit
-"""
-            with open("launch.bat", 'w', encoding='utf8') as f:
-                f.write(launch_setup)
-            sleep(self.settings_array["launch_timeout"])
-            startfile("launch.bat")
+            system(f"startup.bat {setup} > NUL")
             if not silent:
                 self.success_handle("start.instance", f"Successfully started: {args[0]}")
             return True
@@ -540,7 +522,7 @@ exit
 
             elif args[0] == 'main' or args[0] == 'bot':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['main.py', f'lypay_{cfg.VERSION}_launch_stamp']:
+                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['main.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -548,7 +530,7 @@ exit
 
             elif args[0] == 'executor' or args[0] == 'exe':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['executor.py', f'lypay_{cfg.VERSION}_launch_stamp']:
+                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['executor.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -556,7 +538,7 @@ exit
 
             elif args[0] == 'stores' or args[0] == 'store' or args[0] == 'lpsb':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['stores.py', f'lypay_{cfg.VERSION}_launch_stamp']:
+                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['stores.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -564,7 +546,7 @@ exit
 
             elif args[0] == 'admins' or args[0] == 'admin' or args[0] == 'lpaa':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['admins.py', f'lypay_{cfg.VERSION}_launch_stamp']:
+                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['admins.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -572,7 +554,7 @@ exit
 
             elif args[0] == 'every' or args[0] == 'everything' or args[0] == 'all':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[-1] == f'lypay_{cfg.VERSION}_launch_stamp':
+                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[-1] == self.settings_array['launch_stamp']:
                         process.kill()
                 if not silent:
                     self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -810,17 +792,7 @@ exit
             self.error_handle("extra.argument", "ArgumentError", f"You have to assiciate more than 1 argument! Look here for more info: " + F.YELLOW + "help")
 
     def heartbeat(self):
-        with open("heartbeat.bat", 'w') as launch_file:
-            launch_file.write(r"""
-@ECHO OFF
-chcp 65001 > NUL
-cd /d "%~dp0"
-start "LyPay Heartbeat" /min cmd /c bokeh serve --show source\SRV\plots.py
-del /s /q %0 > NUL
-exit
-""")
-        sleep(self.settings_array["launch_timeout"])
-        startfile("heartbeat.cmd")
+        system(r"startup.bat -beat source\SRV\plots.py")
         self.success_handle("heartbeat.launch", "Successfully started measuring")
 
     def config(self, *args):
