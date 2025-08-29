@@ -46,6 +46,7 @@ if not exist ".req" (
     exit /b 1
 )
 echo checking for dependencies...
-python -m pip install -r .req > NUL
+timeout 1 > NUL
+python -m pip install -r .req
 echo done
 exit /b 0
