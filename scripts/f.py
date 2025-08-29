@@ -159,8 +159,8 @@ async def read_sublist(__name__: str) -> dict[str, ...]:
     try:
         return await j_fromfile_async(PATHS.LISTS + __name__ + '.json')
     except FileNotFoundError:
-        async with open(PATHS.LISTS + __name__ + '.json', 'w', encoding='utf8') as f:
-            await f.write('{}')
+        with open(PATHS.LISTS + __name__ + '.json', 'w', encoding='utf8') as f:
+            f.write('{}')
         return {}
 
 
