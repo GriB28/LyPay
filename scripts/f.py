@@ -159,7 +159,9 @@ async def read_sublist(__name__: str) -> dict[str, ...]:
     try:
         return await j_fromfile_async(PATHS.LISTS + __name__ + '.json')
     except FileNotFoundError:
-        raise NameError(f"Список '{__name__}' не найден.")
+        async with open(PATHS.LISTS + __name__ + '.json', 'w', encoding='utf8') as f:
+            await f.write('{}')
+        return {}
 
 
 def update_config(__old_config_version__: list[int], __library_links__: list[...]) -> bool:

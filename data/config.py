@@ -95,6 +95,7 @@ class PATHS:
     EXE = DATA + 'executor\\'
     IMAGES = DATA + 'images\\'
     LISTS = DATA + 'lists\\'
+    ccc_lists = LISTS + 'ccc\\'
     EMAIL = DATA + 'email\\'
 
     DB_BASE = DB + 'base.json'
@@ -111,7 +112,7 @@ class PATHS:
     LAUNCH_SETTINGS = DATA + 'settings.json'
 
     all = (DB, DATA, EXE, IMAGES, LAUNCH_SETTINGS, QR, STORES_KEYBOARDS, STORES_LOGOS, STORES_CHEQUES,
-           OLD_LOGOS, FIREWALL, FIREWALL_MAIN, FIREWALL_LPAA, FIREWALL_LPSB, LISTS, EMAIL)
+           OLD_LOGOS, FIREWALL, FIREWALL_MAIN, FIREWALL_LPAA, FIREWALL_LPSB, LISTS, ccc_lists, EMAIL)
 
 
 class MEDIA:
