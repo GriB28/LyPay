@@ -3,6 +3,7 @@ chcp 65001 > NUL
 cd /d "%~dp0"
 
 if "%1" == "" (
+    call :check_for_dependencies
     start /high "LyPay Launcher" cmd /c python launcher.py
     exit /b 0
 )
@@ -23,7 +24,7 @@ if not "%1" == "" (
     shift
     goto :launching_loop
 )
-exit /b 0
+exit
 
 :bad_parsing
 echo parsing went wrong, press 'enter' to exit
@@ -36,4 +37,15 @@ if "%~1" == "p" (
 ) else ( if "%~1" == "b" (
     start /min "LyPay: heartbeat" cmd /c bokeh serve --show "%~2"
 ))
+exit /b 0
+
+:check_for_dependencies
+if not exist ".req" (
+    echo can't find '.req' file in current directory, press 'enter' to exit
+    pause > NUL
+    exit /b 1
+)
+echo checking for dependencies...
+python -m pip install -r .req > NUL
+echo done
 exit /b 0

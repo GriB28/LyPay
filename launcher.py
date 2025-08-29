@@ -1,5 +1,5 @@
 import sqlite3
-from os import getcwd as cwd, mkdir, listdir, system, getenv
+from os import getcwd as cwd, mkdir, listdir, rename, system, getenv
 from psutil import process_iter, AccessDenied as psutil_AccessDenied
 from os.path import exists
 from dotenv import load_dotenv
@@ -82,7 +82,6 @@ class Launcher:
                 userID=-1
             )
         self.last_error, self.last_success = None, None
-        self.db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Filling config.PATHS...", end=' ')
         created_dirs = 0
@@ -98,16 +97,25 @@ class Launcher:
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Checking the main database...", end=' ')
         try:
+            self.db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
             length = len(self.db.searchall("users", "ID"))
             print(F.LIGHTGREEN_EX + f"{length} user{'s' if length > 1 else ''} found")
         except Exception as e:
-            if "lypay_database.db" not in listdir(cwd() + "database"):
-                print(F.LIGHTRED_EX + "NOT FOUND")
+            bad_exit = True
+            if "lypay_database.db" not in listdir(cwd() + "\\database"):
+                if "lypay_database.db" in listdir(cwd()):
+                    bad_exit = False
+                    rename(cwd() + "\\lypay_database.db", cwd() + "\\database\\lypay_database.db")
+                    self.db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+                    print(F.LIGHTYELLOW_EX + "CONFIGURED FROM ROOT")
+                else:
+                    print(F.LIGHTRED_EX + "NOT FOUND")
             else:
                 print(F.LIGHTRED_EX + "UNKNOWN ERROR")
                 print(F.LIGHTBLACK_EX + S.BRIGHT + f" > {e.args}")
-            input(F.LIGHTBLACK_EX + S.BRIGHT + "> press 'enter' to exit <")
-            exit()
+            if bad_exit:
+                input(F.LIGHTBLACK_EX + S.BRIGHT + "> press 'enter' to exit <")
+                exit()
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Auction compatibility check...", end=' ')
         if self.db.searchall("stores", "ID").count("auction_transfer_route") == 0:
